@@ -30,19 +30,22 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-"""
-Algorithms related to controller synthesis for discretized dynamics.
+"""Controller synthesis for discretized dynamics.
+
+Algorithms related to controller synthesis for
+discretized dynamics.
 
 Primary functions:
-    - L{get_input}
+- `get_input`
 
 Helper functions:
-    - L{get_input_helper}
-    - L{is_seq_inside}
+- `get_input_helper`
+- `is_seq_inside`
 
-See Also
+
+Relevant
 ========
-L{discretize}
+`discretize`
 """
 from __future__ import absolute_import
 from __future__ import print_function
@@ -74,116 +77,140 @@ def assert_cvxopt():
     if solvers is None:
         raise ImportError(
             'Failed to import `cvxopt.solvers`.'
-            'Unable to solve quadratic programming problems.')
+            'Unable to solve quadratic-programming problems.')
 
 
 def get_input(
-    x0, ssys, abstraction,
-    start, end,
-    R=None, r=None, Q=None,
-    ord=1, mid_weight=0.0, solver=None
-):
+        x0, ssys, abstraction,
+        start, end,
+        R=None,
+        r=None,
+        Q=None,
+        ord=1,
+        mid_weight=0.0,
+        solver=None):
     r"""Compute continuous control input for discrete transition.
 
     Computes a continuous control input sequence
     which takes the plant:
 
-        - from state C{start}
-        - to state C{end}
+    - from state `start`
+    - to state `end`
 
-    These are states of the partition C{abstraction}.
-    The computed control input is such that::
+    These are states of the partition `abstraction`.
+    The computed control input is such that:
 
-        f(x, u) = |Rx|_{ord} + |Qu|_{ord} + r'x +
-                  mid_weight * |xc - x(N)|_{ord}
+    ```
+    f(x, u) ==
+        |Rx|_{ord}
+        + |Qu|_{ord}
+        + r'x
+        + mid_weight * |xc - x(N)|_{ord}
+    ```
 
     be minimal.
 
-    C{xc} is the chebyshev center of the final cell.
-    If no cost parameters are given, then the defaults are:
+    `xc` is the chebyshev center of the final cell.
+    If no cost parameters are given,
+    then the defaults are:
 
-        - Q = I
-        - mid_weight = 3
+    - `Q = I`
+    - `mid_weight = 3`
+
 
     Notes
     =====
-    1. The same horizon length as in reachability analysis
-        should be used in order to guarantee feasibility.
+    1. The same horizon length as in
+       reachability analysis
+       should be used, in order to
+       guarantee feasibility.
 
-    2. If the closed loop algorithm has been used
-        to compute reachability the input needs to be
-        recalculated for each time step
-        (with decreasing horizon length).
+    2. If the closed-loop algorithm has
+       been used to compute reachability,
+       then the input needs to be
+       recalculated for each time step
+       (with decreasing horizon length).
 
-        In this case only u(0) should be used as
-        a control signal and u(1) ... u(N-1) discarded.
+       In this case only `u(0)` should be
+       used as a control signal, and
+       `u(1)` ... `u(N - 1)` discarded.
 
     3. The "conservative" calculation makes sure that
-        the plant remains inside the convex hull of the
-        starting region during execution, i.e.::
+       the plant remains inside the convex hull of the
+       starting region during execution, i.e.:
 
-            x(1), x(2) ...  x(N-1) are
-            \in conv_hull(starting region).
+       ```tla
+       \A i \in 1..(N - 1):
+           x[i] \in conv_hull(starting region)
+       ```
 
-        If the original proposition preserving partition
-        is not convex, then safety cannot be guaranteed.
+       If the original proposition-preserving partition
+       is not convex, then safety cannot be guaranteed.
 
     @param x0: initial continuous state
-    @type x0: numpy 1darray
-
+    @type x0: `numpy` 1darray
     @param ssys: system dynamics
-    @type ssys: L{LtiSysDyn}
-
+    @type ssys: `LtiSysDyn`
     @param abstraction: abstract system dynamics
-    @type abstraction: L{AbstractPwa}
+    @type abstraction: `AbstractPwa`
+    @param start: index of the initial state in `abstraction.ts`
+    @type start: `int` >= 0
+    @param end: index of the end state in `abstraction.ts`
+    @type end: `int` >= 0
+    @param R: state cost matrix for:
 
-    @param start: index of the initial state in C{abstraction.ts}
-    @type start: int >= 0
-
-    @param end: index of the end state in C{abstraction.ts}
-    @type end: int >= 0
-
-    @param R: state cost matrix for::
-            x = [x(1)' x(2)' .. x(N)']'
-        If empty, zero matrix is used.
-    @type R: size (N*xdim x N*xdim)
-
-    @param r: cost vector for state trajectory:
+        ```
         x = [x(1)' x(2)' .. x(N)']'
-    @type r: size (N*xdim x 1)
+        ```
 
-    @param Q: input cost matrix for control input::
-            u = [u(0)' u(1)' .. u(N-1)']'
-        If empty, identity matrix is used.
-    @type Q: size (N*udim x N*udim)
+        If empty, then the zero matrix is used.
+    @type R: `size(N * xdim x N * xdim)`
+    @param r: cost vector for state trajectory:
 
+        ```
+        x = [x(1)' x(2)' .. x(N)']'
+        ```
+
+    @type r: `size(N * xdim x 1)`
+    @param Q: input cost matrix for control input:
+
+        ```
+        u = [u(0)' u(1)' .. u(N-1)']'
+        ```
+
+        If empty, then the identity matrix is used.
+    @type Q: `size(N * udim x N * udim)`
     @param mid_weight: cost weight for |x(N)-xc|_{ord}
+    @param ord: norm used for cost function:
 
-    @param ord: norm used for cost function::
-        f(x, u) = |Rx|_{ord} + |Qu|_{ord} + r'x +
-              mid_weight *|xc - x(N)|_{ord}
-    @type ord: ord \in {1, 2, np.inf}
-
-    @return: array A where row k contains the
-        control input: u(k)
-        for k = 0, 1 ... N-1
-    @rtype: (N x m) numpy 2darray
+        ```
+        f(x, u) ==
+            |Rx|_{ord}
+            + |Qu|_{ord}
+            + r'x
+            + mid_weight * |xc - x(N)|_{ord}
+        ```
+    @type ord: `ord \in {1, 2, np.inf}`
+    @return: array `A`, where row `k` contains the
+        control input: `u(k)`,
+        for `k \in 0..(N - 1)`
+    @rtype: `N x m` `numpy` 2darray
     """
     part = abstraction.ppp
     regions = part.regions
-
     ofts = abstraction.ts
     original_regions = abstraction.orig_ppp
     orig = abstraction._ppp2orig
-
     params = abstraction.disc_params
     N = params['N']  # horizon length
     conservative = params['conservative']
     closed_loop = params['closed_loop']
     if closed_loop:
         logger.warning(
-            '`closed_loop = True` for controller computation. '
-            'This option is under development: use with caution.')
+            '`closed_loop = True` for '
+            'controller computation. '
+            'This option is under '
+            'development: use with caution.')
     if (
             R is None and
             Q is None and
@@ -200,40 +227,35 @@ def get_input(
         Q = np.eye(N * ssys.B.shape[1])
     if r is None:
         r = np.zeros([N * x0.size, 1])
-
     if (R.shape[0] != R.shape[1]) or (R.shape[0] != N * x0.size):
-        raise Exception("get_input: "
-                        "R must be square and have side N * dim(state space)")
-
+        raise Exception(
+            '`R` must be square and '
+            'have side `N * dim(state space)`')
     if (Q.shape[0] != Q.shape[1]) or (Q.shape[0] != N * ssys.B.shape[1]):
         raise Exception("get_input: "
                         "Q must be square and have side N * dim(input space)")
     if ofts is not None:
         start_state = start
         end_state = end
-
         if end_state not in ofts.states.post(start_state):
-            raise Exception('get_input: '
-                            'no transition from state s' + str(start) +
-                            ' to state s' + str(end)
-                            )
+            raise Exception(
+                f'no transition from state s{start}'
+                f' to state s{end}')
     else:
-        print("get_input: "
-              "Warning, no transition matrix found, assuming feasible")
-
-    if (not conservative) & (orig is None):
-        print("List of original proposition preserving "
-              "partitions not given, reverting to conservative mode")
+        print(
+            'Warning: no transition matrix found, '
+            'assuming feasible.')
+    if not conservative and orig is None:
+        print(
+            'List of original proposition-preserving '
+            'partitions not given, '
+            'reverting to conservative mode.')
         conservative = True
-
     P_start = regions[start]
     P_end = regions[end]
-
     n = ssys.A.shape[1]
     m = ssys.B.shape[1]
-
     idx = range((N - 1) * n, N * n)
-
     if conservative:
         # Take convex hull or P_start as constraint
         if len(P_start) > 0:
@@ -260,13 +282,11 @@ def get_input(
         else:
             print(P1)
             raise Exception(
-                '`conservative = False` arg requires '
+                '`conservative = False` argument requires '
                 'that original regions be convex')
-
     if len(P_end) > 0:
         low_cost = np.inf
         low_u = np.zeros([N, m])
-
         # for each polytope in target region
         for P3 in P_end:
             cost = np.inf
@@ -278,7 +298,6 @@ def get_input(
                         range(n * (N - 1), n * N)
                     )
                 ] += mid_weight * np.eye(n)
-
                 r[idx, 0] += -mid_weight * xc
                 try:
                     u, cost = get_input_helper(
@@ -295,20 +314,18 @@ def get_input(
                     # region are unreachable, in which case it seems likely that
                     # there is something wrong with the abstraction routine.
                     logger.info(repr(ex))
-                    logger.info((
-                        "Failed to find control action from continuous "
-                        "state {x0} in discrete state {start} "
-                        "to a target polytope in the discrete state {end}.\n"
-                        "Target polytope:\n{P3}").format(
-                            x0=x0, start=start, end=end, P3=P3))
+                    logger.info(
+                        'Failed to find control action from continuous '
+                        f'state {x0} in discrete state {start} '
+                        f'to a target polytope in the discrete state {end}.\n'
+                        f'Target polytope:\n{P3}')
                 r[idx, 0] += mid_weight * xc
-
             if cost < low_cost:
                 low_u = u
                 low_cost = cost
-
         if low_cost == np.inf:
-            raise Exception("get_input: Did not find any trajectory")
+            raise Exception(
+                'Did not find any trajectory')
     else:
         P3 = P_end
         if mid_weight > 0:
@@ -328,24 +345,31 @@ def get_input(
 
 
 def get_input_helper(
-    x0, ssys, P1, P3, N, R, r, Q, ord=1,
-    closed_loop=True, solver=None
-):
-    r"""Calculate the sequence u_seq such that:
+        x0, ssys, P1, P3, N, R, r, Q,
+        ord=1,
+        closed_loop=True,
+        solver=None):
+    r"""Compute sequence of control inputs.
 
-      - x(t+1) = A x(t) + B u(t) + K
-      - x(k) \in P1 for k = 0,...N
-      - x(N) \in P3
-      - [u(k); x(k)] \in PU
+    Computes the sequence `u_seq` such that:
+
+      - `x[t + 1] = A * x(t) + B * u(t) + K`
+      - `\A k \in 0..N:  x[k] \in P1`
+      - `x[N] \in P3`
+      - `[u(k); x(k)] \in PU`
 
     and minimize:
-        |Rx|_{ord} + |Qu|_{ord} + r'x +
-        mid_weight * |xc - x(N)|_{ord}
+
+    ```
+    |Rx|_{ord}
+    + |Qu|_{ord}
+    + r'x
+    + mid_weight * |xc - x(N)|_{ord}
+    ```
     """
     n = ssys.A.shape[1]
     m = ssys.B.shape[1]
-
-    list_P = []
+    list_P = list()
     if closed_loop:
         temp_part = P3
         list_P.append(P3)
@@ -363,16 +387,13 @@ def get_input_helper(
             list_P.append(P1)
         list_P.append(P3)
         L, M = createLM(ssys, N, list_P)
-
     # Remove first constraint on x(0)
     L = L[range(list_P[0].A.shape[0], L.shape[0]), :]
     M = M[range(list_P[0].A.shape[0], M.shape[0]), :]
-
     # Separate L matrix
     Lx = L[:, range(n)]
     Lu = L[:, range(n, L.shape[1])]
     M = M - Lx.dot(x0).reshape(Lx.shape[0], 1)
-
     B_diag = ssys.B
     for i in range(N - 1):
         B_diag = _block_diag2(B_diag, ssys.B)
@@ -381,24 +402,20 @@ def get_input_helper(
     A_row = np.zeros([n, n * N])
     A_K = np.zeros([n * N, n * N])
     A_N = np.zeros([n * N, n])
-
     for i in range(N):
         A_row = ssys.A.dot(A_row)
         A_row[np.ix_(
             range(n),
             range(i * n, (i + 1) * n)
         )] = np.eye(n)
-
         A_N[np.ix_(
             range(i * n, (i + 1) * n),
             range(n)
         )] = A_it
-
         A_K[np.ix_(
             range(i * n, (i + 1) * n),
             range(A_K.shape[1])
         )] = A_row
-
         A_it = ssys.A.dot(A_it)
     Ct = A_K.dot(B_diag)
     if ord == 1:
@@ -441,13 +458,12 @@ def get_input_helper(
         ).T
         if solver != None:
             raise Exception(
-                "_get_input_helper: ",
-                "solver specified but only 'None' allowed for ord = 2")
+                'solver specified, '
+                'but only `None` is allowed for `ord = 2`')
         sol = solvers.qp(P, q, G, h)
         if sol['status'] != "optimal":
             raise _InputHelperQPException(
-                "getInputHelper: "
-                "QP solver finished with status " +
+                'QP solver finished with status ' +
                 str(sol['status']))
         u = np.array(sol['x']).flatten()
         cost = sol['primal objective']
@@ -468,11 +484,12 @@ def get_input_helper(
             np.hstack((np.zeros((Lu.shape[0], 2)), Lu))
         ))
         h_LP = np.vstack((np.zeros((2 * N * (n + m), 1)), M))
-    sol = pc.polytope.lpsolve(c_LP.flatten(), G_LP, h_LP, solver=solver)
+    sol = pc.polytope.lpsolve(
+        c_LP.flatten(), G_LP, h_LP,
+        solver=solver)
     if sol['status'] != 0:
         raise _InputHelperLPException(
-            "getInputHelper: "
-            "LP solver finished with error code " +
+            'LP solver finished with error code ' +
             str(sol['status']))
     var = np.array(sol['x']).flatten()
     u = var[-N * m:]
@@ -489,74 +506,76 @@ class _InputHelperQPException(Exception):
 
 
 def is_seq_inside(x0, u_seq, ssys, P0, P1):
-    r"""Checks if the plant remains inside P0 for time t = 1, ... N-1
-    and  that the plant reaches P1 for time t = N.
+    r"""Check transition from `P0` to `P1`.
+
+    Checks if the plant remains inside
+    polytope `P0` for time `t \in 1..(N - 1)`,
+    and that the plant reaches polytope `P1`
+    for time `t = N`.
     Used to test a computed input sequence.
     No disturbance is taken into account.
 
     @param x0: initial point for execution
-    @param u_seq: (N x m) array where row k is input for t = k
-
+    @param u_seq: `N \X m` array where row `k`
+        is input for `t = k`
     @param ssys: dynamics
-    @type ssys: L{LtiSysDyn}
-
-    @param P0: C{Polytope} where we want x(k) to remain for k = 1, ... N-1
-
-    @return: C{True} if x(k) \in P0 for k = 1, .. N-1 and x(N) \in P1.
-        C{False} otherwise
+    @type ssys: `LtiSysDyn`
+    @param P0: `Polytope` where we want
+        `x(k)` to remain for `k \in 1..(N - 1)`
+    @return: `True` if `x(k) \in P0` for
+        `k \in 1..(N - 1)` and `x(N) \in P1`.
+        `False` otherwise.
     """
     N = u_seq.shape[0]
     x = x0.reshape(x0.size, 1)
-
     A = ssys.A
     B = ssys.B
     if len(ssys.K) == 0:
         K = np.zeros(x.shape)
     else:
         K = ssys.K
-
     inside = True
     for i in range(N - 1):
         u = u_seq[i, :].reshape(u_seq[i, :].size, 1)
         x = A.dot(x) + B.dot(u) + K
-
         if not pc.is_inside(P0, x):
             inside = False
-
     un_1 = u_seq[N - 1, :].reshape(u_seq[N - 1, :].size, 1)
     xn = A.dot(x) + B.dot(un_1) + K
-
     if not pc.is_inside(P1, xn):
         inside = False
-
     return inside
 
 
 def find_discrete_state(x0, part):
-    """Return index identifying the discrete state
-    to which the continuous state x0 belongs to.
+    """Return index of discrete state that contains `x0`.
+
+    Returns the index that identifies the
+    discrete state in the partition `part`
+    to which the continuous state `x0` belongs to.
+
 
     Notes
     =====
     1. If there are overlapping partitions
-        (i.e., x0 belongs to more than one discrete state),
-        then return the first discrete state ID
+       (i.e., `x0` belongs to more than one discrete state),
+       then return the first discrete state ID
 
     @param x0: initial continuous state
-    @type x0: numpy 1darray
+    @type x0: `numpy` 1darray
 
-    @param part: state space partition
-    @type part: L{PropPreservingPartition}
+    @param part: state-space partition
+    @type part: `PropPreservingPartition`
 
-    @return: if C{x0} belongs to some
-        discrete state in C{part},
+    @return: if `x0` belongs to some
+        discrete state in `part`,
         then return the index of that state
 
         Otherwise return None, i.e., in case
-        C{x0} does not belong to any discrete state.
-    @rtype: int
+        `x0` does not belong to any discrete state.
+    @rtype: `int`
     """
-    for (i, region) in enumerate(part):
+    for i, region in enumerate(part):
         if x0 in region:
             return i
     return None

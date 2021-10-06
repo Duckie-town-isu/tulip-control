@@ -47,6 +47,6 @@ of Model Checking" by Baier and Katoen (2008).
 # __all__ = ["abstract", "hybrid", "transys"]
 
 try:
-    from ._version import version as __version__
+    from tulip._version import version as __version__
 except ImportError:
     __version__ = None

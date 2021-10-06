@@ -29,10 +29,10 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
-"""Interface to C{gr1py}.
+"""Interface to `gr1py`.
 
-U{https://pypi.python.org/pypi/gr1py}
-U{https://github.com/slivingston/gr1py}
+<https://pypi.python.org/pypi/gr1py>
+<https://github.com/slivingston/gr1py>
 """
 from __future__ import absolute_import
 import logging
@@ -53,24 +53,29 @@ _hl = 60 * '-'
 def check_realizable(spec):
     """Decide realizability of specification.
 
-    Consult the documentation of L{synthesize} about parameters.
+    Consult the documentation of `synthesize` about parameters.
 
-    @return: True if realizable, False if not, or an error occurs.
+    @return: `True` if realizable,
+        `False` if not, or
+        an error occurs.
     """
     init_option = select_options(spec)
     tsys, exprtab = _spec_to_gr1py(spec)
     return gr1py.solve.check_realizable(
-        tsys, exprtab, init_flags=init_option)
+        tsys, exprtab,
+        init_flags=init_option)
+
 
 def synthesize(spec):
     """Synthesize strategy realizing the given specification.
 
-    cf. L{tulip.interfaces.gr1c.synthesize}
+    cf. `tulip.interfaces.gr1c.synthesize`
     """
     init_option = select_options(spec)
     tsys, exprtab = _spec_to_gr1py(spec)
     strategy = gr1py.solve.synthesize(
-        tsys, exprtab, init_flags=init_option)
+        tsys, exprtab,
+        init_flags=init_option)
     if strategy is None:
         return None
     s = gr1py.output.dumps_json(tsys.symtab, strategy)
@@ -79,9 +84,11 @@ def synthesize(spec):
 
 def _spec_to_gr1py(spec):
     if gr1py is None:
-        raise ValueError('Import of gr1py interface failed.\n'
-                         'Please verify installation of "gr1py".')
+        raise ValueError(
+            'Import of gr1py interface failed.\n'
+            'Please verify installation of `gr1py`.')
     s = translate(spec, 'gr1c')
-    logger.info('\n{hl}\n gr1py input:\n {s}\n{hl}'.format(s=s, hl=_hl))
+    logger.info(
+        f'\n{_hl}\n gr1py input:\n {s}\n{_hl}')
     tsys, exprtab = gr1py.cli.loads(s)
     return tsys, exprtab

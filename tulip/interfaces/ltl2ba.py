@@ -29,20 +29,21 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
-"""Interface to ltl2ba"""
+"""Interface to `ltl2ba`."""
 import logging
-logger = logging.getLogger(__name__)
 import subprocess
+
 import networkx as nx
 import ply.lex
 import ply.yacc
 
 
 TABMODULE = 'ltl2ba_parsetab'
+logger = logging.getLogger(__name__)
 
 
-class Lexer(object):
-    """Token rules to build lexer for ltl2ba output."""
+class Lexer:
+    """Token rules to build lexer for `ltl2ba` output."""
 
     reserved = {
         'goto': 'GOTO',
@@ -50,7 +51,6 @@ class Lexer(object):
         'fi': 'FI',
         'never': 'NEVER',
         'skip': 'SKIP'}
-
     tokens = (
         'TRUE', 'FALSE',
         'NUMBER',
@@ -94,14 +94,17 @@ class Lexer(object):
     t_ignore = ' \t'
 
     def __init__(self):
-        self.lexer = ply.lex.lex(module=self, debug=False)
+        self.lexer = ply.lex.lex(
+            module=self,
+            debug=False)
 
     def t_newline(self, t):
         r'\n+'
         t.lexer.lineno += t.value.count('\n')
 
     def t_error(self, t):
-        logger.warning("Illegal character '%s'" % t.value[0])
+        logger.warning(
+            f'Illegal character `{t.value[0]}`')
         t.lexer.skip(1)
 
     def t_name(self, t):
@@ -110,8 +113,8 @@ class Lexer(object):
         return t
 
 
-class Parser(object):
-    """Production rules to build parser for ltl2ba output."""
+class Parser:
+    """Production rules to build parser for `ltl2ba` output."""
 
     precedence = (
         # ('right', 'UNTIL', 'RELEASE'),
@@ -124,7 +127,8 @@ class Parser(object):
         # ('right', 'NEXT'),
         ('right', 'NOT'),
         # ('left', 'PRIME'),
-        ('nonassoc', 'EQUALS', 'NEQUALS', 'LT', 'LE', 'GT', 'GE'),
+        ('nonassoc', 'EQUALS', 'NEQUALS',
+         'LT', 'LE', 'GT', 'GE'),
         ('nonassoc', 'TIMES', 'DIV'),
         ('nonassoc', 'PLUS', 'MINUS'),
         ('nonassoc', 'TRUE', 'FALSE'))
@@ -133,15 +137,18 @@ class Parser(object):
         """Build lexer and parser."""
         self.lexer = Lexer()
         self.tokens = self.lexer.tokens
-        self.parser = ply.yacc.yacc(module=self, tabmodule=TABMODULE,
-                                    write_tables=True, debug=False)
+        self.parser = ply.yacc.yacc(
+            module=self,
+            tabmodule=TABMODULE,
+            write_tables=True,
+            debug=False)
         self.g = None
         self.initial_nodes = None
         self.accepting_nodes = None
         self.symbols = None
 
     def parse(self, ltl2ba_output):
-        """Return a Buchi automaton from parsing C{ltl2ba_output}.
+        """Return a Buchi automaton from parsing `ltl2ba_output`.
 
         @return: Buchi automaton as a 3-`tuple` containing:
           - `dict` mapping symbols to types (all `"boolean"`)
@@ -201,19 +208,19 @@ class Parser(object):
 
     def p_expr_paren(self, p):
         """expr : LPAREN expr RPAREN"""
-        p[0] = '({expr})'.format(expr=p[2])
+        p[0] = f'({p[2]})'
 
     def p_and(self, p):
         """expr : expr AND expr"""
-        p[0] = '({x} and {y})'.format(x=p[1], y=p[3])
+        p[0] = f'({p[1]} and {p[3]})'
 
     def p_or(self, p):
         """expr : expr OR expr"""
-        p[0] = '({x} or {y})'.format(x=p[1], y=p[3])
+        p[0] = f'({p[1]} or {p[3]})'
 
     def p_not(self, p):
         """expr : NOT expr"""
-        p[0] = '(not {expr})'.format(expr=p[2])
+        p[0] = f'(not {p[2]})'
 
     def p_number(self, p):
         """expr : NUMBER"""
@@ -242,7 +249,8 @@ class Parser(object):
         """empty :"""
 
     def p_error(self, p):
-        logger.error('Syntax error at ' + p.value)
+        logger.error(
+            f'Syntax error at {p.value}')
 
 
 def call_ltl2ba(formula, prefix=''):
@@ -255,32 +263,38 @@ def call_ltl2ba(formula, prefix=''):
 
     Depends
     =======
-    ltl2ba: http://www.lsv.ens-cachan.fr/~gastin/ltl2ba/
+    `ltl2ba`: <http://www.lsv.ens-cachan.fr/~gastin/ltl2ba/>
 
-    @param formula: LTL formula for input to ltl2ba
-    @type formula: str
+    @param formula: LTL formula for input to `ltl2ba`
+    @type formula: `str`
 
     @return: Buchi Automaton
-    @rtype: tulip.transys.BA
+    @rtype: `tulip.transys.BA`
     """
     try:
-        subprocess.call(['ltl2ba', '-h'], stdout=subprocess.PIPE)
+        subprocess.call(
+            ['ltl2ba', '-h'],
+            stdout=subprocess.PIPE)
     except OSError:
         raise Exception('cannot find ltl2ba on path')
     p = subprocess.Popen(
-        [prefix + 'ltl2ba', '-f', '"{f}"'.format(f=formula)],
+        [f'{prefix}ltl2ba',
+         '-f',
+         f'"{formula}"'],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         universal_newlines=True)
     p.wait()
     ltl2ba_output = p.stdout.read()
-    logger.info('ltl2ba output:\n\n{s}\n'.format(s=ltl2ba_output))
+    logger.info(
+        f'ltl2ba output:\n\n{ltl2ba_output}\n')
     if p.returncode != 0:
-        raise Exception('Error when converting LTL to Buchi.')
+        raise Exception(
+            'Error when converting LTL to Buchi.')
     return ltl2ba_output
 
 
-if __name__ == '__main__':
+def _main():
     logging.basicConfig(level=logging.DEBUG)
     logger.setLevel(level=logging.DEBUG)
     parser = Parser()
@@ -288,3 +302,7 @@ if __name__ == '__main__':
     out = call_ltl2ba(f)
     symbols, g, initial, accepting = parser.parse(out)
     g.save('ba.pdf')
+
+
+if __name__ == '__main__':
+    _main()

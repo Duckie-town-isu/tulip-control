@@ -35,16 +35,16 @@
 from __future__ import absolute_import
 
 # avoid shadowing modules
-from .discretization import (
+from tulip.abstract.discretization import (
     discretize, discretize_switched,
-    multiproc_discretize_switched
-)
-from .feasible import is_feasible, solve_feasible
+    multiproc_discretize_switched)
+from tulip.abstract.feasible import (
+    is_feasible, solve_feasible)
 
-from .prop2partition import (
+from tulip.abstract.prop2partition import (
     prop2part, part2convex,
     pwa_partition, add_grid,
-    PropPreservingPartition, PPP
-)
+    PropPreservingPartition, PPP)
 
-from .find_controller import get_input, find_discrete_state
+from tulip.abstract.find_controller import (
+    get_input, find_discrete_state)

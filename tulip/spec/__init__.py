@@ -31,5 +31,5 @@
 # SUCH DAMAGE.
 """Specification subpackage of TuLiP"""
 from __future__ import absolute_import
-from .form import LTL, GRSpec
-from .translation import translate
+from tulip.spec.form import LTL, GRSpec
+from tulip.spec.translation import translate

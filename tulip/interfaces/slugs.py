@@ -32,7 +32,7 @@
 """Interface to the slugs implementation of GR(1) synthesis.
 
 Relevant links:
-  - U{slugs<https://github.com/LTLMoP/slugs>}
+- [slugs](https://github.com/LTLMoP/slugs)
 """
 from __future__ import absolute_import
 import errno
@@ -47,8 +47,9 @@ from tulip.spec import GRSpec, translate
 
 # If this path begins with '/', then it is considered to be absolute.
 # Otherwise, it is relative to the path of the `slugs` executable.
-SLUGS_COMPILER_PATH = '../tools/StructuredSlugsParser/compiler.py'
-
+SLUGS_COMPILER_PATH = (
+    '../tools/StructuredSlugsParser/'
+    'compiler.py')
 BDD_FILE = 'strategy_bdd.txt'
 logger = logging.getLogger(__name__)
 
@@ -56,9 +57,10 @@ logger = logging.getLogger(__name__)
 def check_realizable(spec):
     """Decide realizability of specification.
 
-    Consult the documentation of L{synthesize} about parameters.
+    Consult the documentation of `synthesize` about parameters.
 
-    @return: True if realizable, False if not, or an error occurs.
+    @return: `True` if realizable,
+        `False` if not, or an error occurs.
     """
     if isinstance(spec, GRSpec):
         assert not spec.moore
@@ -71,17 +73,17 @@ def check_realizable(spec):
             fin.write(bytes(struct, 'utf-8'))
         except TypeError:  # Try to be compatible with Python 2.7
             fin.write(bytes(struct))
-
     realizable, out = _call_slugs(fin.name, synth=False)
     return realizable
 
 
 def synthesize(spec, symbolic=False):
-    """Return strategy satisfying the specification C{spec}.
+    """Return strategy satisfying the specification `spec`.
 
-    @type spec: L{GRSpec} or C{str} in structured slugs syntax.
-    @return: If realizable return synthesized strategy, otherwise C{None}.
-    @rtype: C{networkx.DiGraph}
+    @type spec: `GRSpec` or `str` in structured slugs syntax.
+    @return: If realizable return synthesized strategy,
+        otherwise `None`.
+    @rtype: `networkx.DiGraph`
     """
     if isinstance(spec, GRSpec):
         assert not spec.moore
@@ -92,9 +94,12 @@ def synthesize(spec, symbolic=False):
     with tempfile.NamedTemporaryFile(delete=False) as fin:
         try:
             fin.write(bytes(struct, 'utf-8'))
-        except TypeError:  # Try to be compatible with Python 2.7
+        except TypeError:
             fin.write(bytes(struct))
-    realizable, out = _call_slugs(fin.name, synth=True, symbolic=symbolic)
+    realizable, out = _call_slugs(
+        fin.name,
+        synth=True,
+        symbolic=symbolic)
     if not realizable:
         return None
     os.unlink(fin.name)
@@ -117,71 +122,76 @@ def synthesize(spec, symbolic=False):
         h.add_node(u, state=int_state)
     for u, v in g.edges():
         h.add_edge(u, v)
+    nodes = '\n  '.join(str(x) for x in h.nodes(data=True))
     logger.debug(
-        ('loaded strategy with vertices:\n  {v}\n'
-         'and edges:\n {e}\n').format(
-            v='\n  '.join(str(x) for x in h.nodes(data=True)),
-            e=h.edges()))
+        f'loaded strategy with vertices:\n  {nodes}\n'
+        f'and edges:\n {h.edges()}\n')
     return h
 
 
 def _bitfields_to_ints(bit_state, vrs):
     """Convert bitfield representation to integers.
 
-    @type line: C{str}
-    @type vrs: C{dict}
+    @type line: `str`
+    @type vrs: `dict`
     """
     int_state = dict()
     for var, dom in vrs.items():
         if dom == 'boolean':
             int_state[var] = bit_state[var]
             continue
-        bitnames = ['{var}@{i}'.format(var=var, i=i)
+        bitnames = [f'{var}@{i}'
                     for i in range(dom[1].bit_length())]
-        bitnames[0] = '{var}@0.{min}.{max}'.format(
-            var=var, min=dom[0], max=dom[1])
+        bitnames[0] = f'{var}@0.{dom[0]}.{dom[1]}'
         bitvalues = [bit_state[b] for b in bitnames]
         # little-endian
-        val = int(''.join(str(b) for b in reversed(bitvalues)), 2)
+        val = int(
+            ''.join(str(b) for b in reversed(bitvalues)),
+            2)
         int_state[var] = val
     return int_state
 
 
-def _call_slugs(filename, synth=True, symbolic=True, slugs_compiler_path=None):
+def _call_slugs(
+        filename,
+        synth=True,
+        symbolic=True,
+        slugs_compiler_path=None):
     """Call `slugs` and return results.
 
-    slugs_compiler_path is the path to the slugsin converter format.
-    If None (default), then use the path as in the module-level
-    identifier SLUGS_COMPILER_PATH.  If this path begins with '/',
-    then it is considered to be absolute.  Otherwise, it is relative
-    to the path of the `slugs` executable.
+    `slugs_compiler_path` is the path to
+    the SlugsIn converter format.
+    If `None` (default), then use the path
+    as in the module-level identifier
+    `SLUGS_COMPILER_PATH`.
+
+    If this path begins with `/`,
+    then it is considered to be absolute.
+    Otherwise, it is relative to the path
+    of the `slugs` executable.
     """
     if slugs_compiler_path is None:
         slugs_compiler_path = SLUGS_COMPILER_PATH
-
     slugs_path = None
     for exe_path in os.environ['PATH'].split(':'):
         if os.path.exists(os.path.join(exe_path, 'slugs')):
             slugs_path = os.path.join(exe_path, 'slugs')
             break
-
     if slugs_path is None:
-        raise Exception('slugs not found in path.')
-
+        raise Exception('`slugs` not found in path.')
     if not os.path.isabs(slugs_compiler_path):
         slugs_compiler_path = os.path.abspath(
-            os.path.join(os.path.dirname(slugs_path),
-                         slugs_compiler_path))
-
+            os.path.join(
+                os.path.dirname(slugs_path),
+                slugs_compiler_path))
     if not os.path.exists(slugs_compiler_path):
-        raise Exception('slugs/compiler.py not found.')
-
+        raise Exception('`slugs/compiler.py` not found.')
     with tempfile.NamedTemporaryFile(delete=False) as slugs_infile:
-        subprocess.check_call(['python', slugs_compiler_path, filename],
-                              stdout=slugs_infile,
-                              stderr=subprocess.STDOUT,
-                              universal_newlines=True)
-
+        subprocess.check_call(
+            ['python', slugs_compiler_path, filename],
+            stdout=slugs_infile,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True)
     options = [slugs_path, slugs_infile.name]
     if synth:
         if symbolic:
@@ -192,10 +202,13 @@ def _call_slugs(filename, synth=True, symbolic=True, slugs_compiler_path=None):
     else:
         # As of commit ad0cf12c14131fc6a20fe29edfe04d9aefd7c6d4
         # (tip of master branch of
-        #  https://github.com/LTLMoP/slugs.git at the time of writing),
-        # Slugs seems to default to checking realizability. Trying to
-        # provide `--onlyRealizability` leads to error message from
-        # `slugs`: "Error: Parameter '--onlyRealizability' is unknown."
+        # <https://github.com/LTLMoP/slugs.git>
+        # at the time of writing),
+        # Slugs seems to default to checking realizability.
+        # Trying to
+        # provide `--onlyRealizability` leads to
+        # the following error message from `slugs`:
+        # > Error: Parameter '--onlyRealizability' is unknown.
         pass
     logger.debug('Calling: ' + ' '.join(options))
     try:
@@ -212,9 +225,9 @@ def _call_slugs(filename, synth=True, symbolic=True, slugs_compiler_path=None):
             raise
     out, err = p.communicate()
     msg = (
-        '\n slugs return code: {c}\n\n'.format(c=p.returncode) +
-        '\n slugs stderr: {c}\n\n'.format(c=err) +
-        '\n slugs stdout:\n\n {out}\n\n'.format(out=out))
+        f'\n slugs return code: {p.returncode}\n\n'
+        f'\n slugs stderr: {err}\n\n'
+        f'\n slugs stdout:\n\n {out}\n\n')
     logger.debug(msg)
     # error ?
     if p.returncode != 0:

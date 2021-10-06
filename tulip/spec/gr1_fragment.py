@@ -59,99 +59,91 @@ from tulip.spec import ast as sast
 
 
 def check(formula):
-    """Parse formula string and create abstract syntax tree (AST).
+    """Return syntax tree for `formula`.
+
+    Parse `formula` and create abstract
+    syntax tree (AST).
+
+    @type formula: `str`
     """
     ast = lexyacc.parse(formula)
-
-    dfa = trs.automata.FiniteWordAutomaton(atomic_proposition_based=False,
-                                           deterministic=True)
-
-    dfa.alphabet |= {'!', 'W', 'U', 'G', 'F',
-                     'U_left', 'U_right',
-                     'W_left', 'W_right'}
-
+    dfa = trs.automata.FiniteWordAutomaton(
+        atomic_proposition_based=False,
+        deterministic=True)
+    dfa.alphabet |= {
+        '!', 'W', 'U', 'G', 'F',
+        'U_left', 'U_right',
+        'W_left', 'W_right'}
     dfa.states.add_from({'gf', 'fg', 'g', 'f'})
     dfa.states.initial.add('gf')
-
+    #
     dfa.transitions.add('gf', 'fg', letter='!')
     dfa.transitions.add('fg', 'gf', letter='!')
     dfa.transitions.add('g', 'f', letter='!')
     dfa.transitions.add('f', 'g', letter='!')
-
+    #
     dfa.transitions.add('gf', 'gf', letter='W')
     dfa.transitions.add('gf', 'gf', letter='U_left')
     dfa.transitions.add('gf', 'gf', letter='G')
-
+    #
     dfa.transitions.add('fg', 'fg', letter='U')
     dfa.transitions.add('fg', 'fg', letter='F')
     dfa.transitions.add('fg', 'fg', letter='W_right')
-
+    #
     dfa.transitions.add('gf', 'f', letter='U_right')
     dfa.transitions.add('gf', 'f', letter='F')
-
+    #
     dfa.transitions.add('fg', 'g', letter='W_left')
     dfa.transitions.add('fg', 'g', letter='G')
-
+    #
     dfa.transitions.add('g', 'g', letter='W')
     dfa.transitions.add('g', 'g', letter='G')
-
+    #
     dfa.transitions.add('f', 'f', letter='U')
     dfa.transitions.add('f', 'f', letter='F')
-
     # plot tree automaton
     # dfa.save('dfa.pdf')
-
+    #
     # plot parse tree
     sast.dump_dot(ast, 'ast.dot')
-
     # sync product of AST with DFA,
     # to check acceptance
     Q = [(ast, 'gf')]
     while Q:
         s, q = Q.pop()
-        logger.info('visiting: ' + str(s) + ', ' + str(q))
-
+        logger.info(f'visiting: {s}, {q}')
         if isinstance(s, sast.Unary):
             op = s.operator
-
             if op in {'!', 'G', 'F'}:
                 t = dfa.transitions.find(q, letter=op)
-
                 if not t:
                     raise Exception('not in fragment')
-
                 qi, qj, w = t[0]
-
                 Q.append((s.operand, qj))
             else:
                 # ignore
                 Q.append((s.operand, q))
         elif isinstance(s, sast.Binary):
             op = s.operator
-
             if op in {'W', 'U'}:
-                t = dfa.transitions.find(q, letter=op)
+                t = dfa.transitions.find(
+                    q, letter=op)
                 if t:
                     qi, qj, w = t[0]
                     Q.append((s.op_l, qj))
                     Q.append((s.op_r, qj))
                 else:
-                    t = dfa.transitions.find(q, letter=op + '_left')
-
+                    t = dfa.transitions.find(
+                        q, letter=f'{op}_left')
                     if not t:
                         raise Exception('not in fragment')
-
                     qi, qj, w = t[0]
-
                     Q.append((s.op_l, qj))
-
-                    t = dfa.transitions.find(q, letter=op + '_right')
-
+                    t = dfa.transitions.find(
+                        q, letter=f'{op}_right')
                     if not t:
                         raise Exception('not in fragment')
-
                     qi, qj, w = t[0]
-
                     Q.append((s.op_r, qj))
             else:
                 # ignore
@@ -159,7 +151,6 @@ def check(formula):
                 Q.append((s.op_r, q))
         elif isinstance(s, sast.Var):
             print('reached var')
-
     return ast
 
 
@@ -168,25 +159,29 @@ def str_to_grspec(f):
 
     Formula `f` must be in the form:
 
-      A -> G
+    ```
+    A => G
+    ```
 
-    where each of A, G is a conjunction of terms: `B`, `[]C`, `[]<>B`.
-    For more details on `B, C`, see [split_gr1].
+    where each of A, G is a conjunction of
+    terms: `B`, `[]C`, `[]<>B`.
+    For more details on `B, C`, see `split_gr1`.
 
     @type f: `str`
-    @rtype: [GRSpec]
+    @rtype: `GRSpec`
     """
     t = parser.parse(f)
     assert t.operator == '->'
     env, sys = t.operands
     d = {'assume': split_gr1(env),
          'assert': split_gr1(sys)}
-    return GRSpec(env_init=d['assume']['init'],
-                  env_safety=d['assume']['G'],
-                  env_prog=d['assume']['GF'],
-                  sys_init=d['assert']['init'],
-                  sys_safety=d['assert']['G'],
-                  sys_prog=d['assert']['GF'])
+    return GRSpec(
+        env_init=d['assume']['init'],
+        env_safety=d['assume']['G'],
+        env_prog=d['assume']['GF'],
+        sys_init=d['assert']['init'],
+        sys_safety=d['assert']['G'],
+        sys_prog=d['assert']['GF'])
 
 
 def split_gr1(f):
@@ -264,10 +259,9 @@ def split_gr1(f):
             op = has_operator(u, g, ops)
             if op is None:
                 continue
-            raise AssertionError((
-                'found inadmissible operator "{op}" '
-                'in "{f}" formula').format(
-                    op=op, f=u))
+            raise AssertionError(
+                f'found inadmissible operator "{op}" '
+                f'in "{u}" formula')
     # conjoin (except for progress)
     init = ' & '.join(u.flatten() for u in reversed(d['init']))
     d['init'] = [init]
@@ -296,159 +290,148 @@ def has_operator(u, g, operators):
 
 
 def stability_to_gr1(p, aux='aux'):
-    """Convert C{<>[] p} to GR(1).
+    """Convert `<>[] p` to GR(1).
 
     Warning: This conversion is sound, but not complete.
     See p.2, U{[E10]
     <https://tulip-control.sourceforge.io/doc/bibliography.html#e10>}
 
-    GR(1) form::
+    GR(1) form:
 
-        !(aux) &&
-        [](aux -> X aux) &&
-        []<>(aux) &&
+    ```
+    !(aux) &&
+    [](aux -> X aux) &&
+    []<>(aux) &&
 
-        [](aux -> p)
+    [](aux -> p)
+    ```
 
-    @type p: str
-
+    @type p: `str`
     @param aux: name to use for auxiliary variable
-    @type aux: str
-
-    @rtype: L{GRSpec}
+    @type aux: `str`
+    @rtype: `GRSpec`
     """
     logging.warning(
-        'Conversion of stability (<>[]p) to GR(1)' +
-        'is sound, but NOT complete.'
-    )
-
+        'Conversion of stability (<>[]p) to GR(1)'
+        'is sound, but NOT complete.')
     a = aux
     a0 = a
-
     p = _paren(p)
     a = _paren(a)
-
     v = tx.check_var_name_conflict(p, a0)
-
     sys_vars = v | {a0}
     sys_init = {'!' + a}
-    sys_safe = {a + ' -> ' + p,
-                a + ' -> X ' + a}
+    sys_safe = {
+        a + ' -> ' + p,
+        a + ' -> X ' + a}
     sys_prog = {a}
-
-    return GRSpec(sys_vars=sys_vars, sys_init=sys_init,
-                  sys_safety=sys_safe, sys_prog=sys_prog)
+    return GRSpec(
+        sys_vars=sys_vars,
+        sys_init=sys_init,
+        sys_safety=sys_safe,
+        sys_prog=sys_prog)
 
 
 def response_to_gr1(p, q, aux='aux'):
-    """Convert C{[](p -> <> q)} to GR(1).
+    """Convert `[](p -> <> q)` to GR(1).
 
-    GR(1) form::
+    GR(1) form:
 
-        []<>(aux) &&
+    ```
+    []<>(aux) &&
 
-        []( (p && !q) -> X ! aux) &&
-        []( (! aux && !q) -> X ! aux)
+    []( (p && !q) -> X ! aux) &&
+    []( (! aux && !q) -> X ! aux)
+    ```
 
-    @type p: str
-
-    @type q: str
-
+    @type p: `str`
+    @type q: `str`
     @param aux: name to use for auxiliary variable
-    @type aux: str
-
-    @rtype: L{GRSpec}
+    @type aux: `str`
+    @rtype: `GRSpec`
     """
     a = aux
     a0 = a
-
     p = _paren(p)
     q = _paren(q)
     a = _paren(a)
-
-    s = p + ' -> <> ' + q
+    s = f'{p} -> <> {q}'
     v = tx.check_var_name_conflict(s, a0)
-
     sys_vars = v | {a0}
     # sys_init = {a}
     sys_safe = {
-        '(' + p + ' && !' + q + ') -> X !' + a,
-        '(!' + a + ' && !' + q + ') -> X !' + a
-    }
+        f'({p} && !{q}) -> X !{a}',
+        f'(!{a} && !{q}) -> X !{a}'}
     sys_prog = {a}
-
-    return GRSpec(sys_vars=sys_vars,  # sys_init=sys_init,
-                  sys_safety=sys_safe, sys_prog=sys_prog)
+    return GRSpec(
+        sys_vars=sys_vars,  # sys_init=sys_init,
+        sys_safety=sys_safe,
+        sys_prog=sys_prog)
 
 
 def eventually_to_gr1(p, aux='aux'):
-    """Convert C{<> p} to GR(1).
+    """Convert `<> p` to GR(1).
 
-    GR(1) form::
+    GR(1) form:
 
-        !(aux) &&
-        [](aux -> X aux) &&
-        []<>(aux) &&
+    ```
+    !(aux) &&
+    [](aux -> X aux) &&
+    []<>(aux) &&
 
-        []( (!p && !aux) -> X!(aux) )
+    []( (!p && !aux) -> X!(aux))
+    ```
 
-    @type p: str
-
+    @type p: `str`
     @param aux: name to use for auxiliary variable
-    @type aux: str
-
-    @rtype: L{GRSpec}
+    @type aux: `str`
+    @rtype: `GRSpec`
     """
     a = aux
     a0 = a
-
     p = _paren(p)
     a = _paren(a)
-
     v = tx.check_var_name_conflict(p, a0)
-
     sys_vars = v | {a0}
     sys_init = {'!(' + a + ')'}
     sys_safe = {
-        '(!' + p + ' && !' + a + ') -> X !' + a,
-        a + ' -> X ' + a
-    }
+        f'(!{p} && !{a}) -> X !{a}',
+        f'{a} -> X {a}'}
     sys_prog = {a}
-
-    return GRSpec(sys_vars=sys_vars, sys_init=sys_init,
-                  sys_safety=sys_safe, sys_prog=sys_prog)
+    return GRSpec(
+        sys_vars=sys_vars,
+        sys_init=sys_init,
+        sys_safety=sys_safe,
+        sys_prog=sys_prog)
 
 
 def until_to_gr1(p, q, aux='aux'):
-    """Convert C{p U q} to GR(1).
+    """Convert `p U q` to GR(1).
 
-    GR(1) form::
+    GR(1) form:
 
-        (!q -> !aux) &&
-        [](q -> aux)
-        [](aux -> X aux) &&
-        []<>(aux) &&
+    ```
+    (!q -> !aux) &&
+    [](q -> aux)
+    [](aux -> X aux) &&
+    []<>(aux) &&
 
-        []( (!aux && X(!q) ) -> X!(aux) ) &&
-        [](!aux -> p)
+    []( (!aux && X(!q) ) -> X!(aux)) &&
+    [](!aux -> p)
+    ```
 
-    @type p: str
-
+    @type p: `str`
     @param aux: name to use for auxiliary variable
-    @type aux: str
-
-    @rtype: L{GRSpec}
+    @type aux: `str`
+    @rtype: `GRSpec`
     """
     a = aux
     a0 = a
-
     p = _paren(p)
     q = _paren(q)
     a = _paren(a)
-
     s = p + ' && ' + q
     v = tx.check_var_name_conflict(s, a0)
-
     sys_vars = v | {a0}
     sys_init = {'!' + q + ' -> !' + a}
     sys_safe = {
@@ -458,19 +441,19 @@ def until_to_gr1(p, q, aux='aux'):
         '(!' + a + ') -> ' + p
     }
     sys_prog = {a}
-
-    return GRSpec(sys_vars=sys_vars, sys_init=sys_init,
-                  sys_safety=sys_safe, sys_prog=sys_prog)
+    return GRSpec(
+        sys_vars=sys_vars,
+        sys_init=sys_init,
+        sys_safety=sys_safe,
+        sys_prog=sys_prog)
 
 
 def _paren(x):
-    return '({x})'.format(x=x)
+    return f'({x})'
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-
     s = '(a U b) && []a && <>a && <>a && []<>(<>z)'
     parsed_formula = check(s)
-
-    print('Parsing result: ' + str(parsed_formula))
+    print(f'Parsing result: {parsed_formula}')

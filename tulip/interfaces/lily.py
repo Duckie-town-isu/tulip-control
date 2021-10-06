@@ -32,10 +32,10 @@
 """
 Interface to Lily that solves LTL games.
 
-Requires pydot for networkx to load the Moore strategy graph.
+Requires `pydot` for `networkx` to load the Moore strategy graph.
 
 Relevant links:
-  - U{Lily<http://www.ist.tugraz.at/staff/jobstmann/lily/>}
+  - [Lily](http://www.ist.tugraz.at/staff/jobstmann/lily/)
 """
 import logging
 import errno
@@ -60,28 +60,31 @@ IO_PARTITION_FILE = 'io_partition.txt'
 DOTFILE = 'ltl2vl-synthesis.dot'
 
 
-def synthesize(formula, env_vars=None, sys_vars=None):
-    """Return Moore transducer if C{formula} is realizable.
+def synthesize(
+        formula,
+        env_vars=None,
+        sys_vars=None):
+    """Return Moore transducer if `formula` is realizable.
 
-    Variable C{dict}s have variable names as keys and their type as
+    Variable `dict`s have variable names as keys and their type as
     value. The types should be 'boolean'. These parameters are only
-    used if formula is of type C{str}. Else, the variable dictionaries
-    associated with the L{LTL} or L{GRSpec} object are used.
+    used if formula is of type `str`. Else, the variable dictionaries
+    associated with the `LTL` or `GRSpec` object are used.
 
     @param formula: linear temporal logic formula
-    @type formula: C{str}, L{LTL}, or L{GRSpec}
+    @type formula: `str`, `LTL`, or `GRSpec`
 
     @param env_vars: uncontrolled variables (inputs); used only if
-        C{formula} is of type C{str}
-    @type env_vars: C{dict} or None
+        `formula` is of type `str`
+    @type env_vars: `dict` or None
 
     @param sys_vars: controlled variables (outputs); used only if
-        C{formula} is of type C{str}
-    @type sys_vars: C{dict} or None
+        `formula` is of type `str`
+    @type sys_vars: `dict` or None
 
     @return: symbolic Moore transducer
         (guards are conjunctions, not sets)
-    @rtype: L{MooreMachine}
+    @rtype: `MooreMachine`
     """
     if isinstance(formula, GRSpec):
         env_vars = formula.env_vars
@@ -89,42 +92,40 @@ def synthesize(formula, env_vars=None, sys_vars=None):
     elif isinstance(formula, LTL):
         env_vars = formula.input_variables
         sys_vars = formula.output_variables
-
     all_vars = dict(env_vars)
     all_vars.update(sys_vars)
     if not all(v == 'boolean' for v in all_vars.values()):
         raise TypeError(
-            'all variables should be Boolean:\n{v}'.format(v=all_vars))
-
+            f'all variables should be Boolean:\n{all_vars}')
     if isinstance(formula, GRSpec):
         f = translate(formula, 'wring')
     else:
         T = parse(str(formula))
-        f = translate_ast(T, 'wring').flatten(env_vars=env_vars,
-                                              sys_vars=sys_vars)
-
+        f = translate_ast(T, 'wring').flatten(
+            env_vars=env_vars,
+            sys_vars=sys_vars)
     # dump partition file
-    s = '.inputs {inp}\n.outputs {out}'.format(
-        inp=' '.join(env_vars),
-        out=' '.join(sys_vars)
-    )
+    inp = ' '.join(env_vars)
+    out = ' '.join(sys_vars)
+    s = f'.inputs {inp}\n.outputs {out}'
     with open(IO_PARTITION_FILE, 'w') as fid:
         fid.write(s)
-
     # call lily
     try:
-        p = subprocess.Popen([LILY, '-f', f, '-syn', IO_PARTITION_FILE],
-                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                             universal_newlines=True)
+        p = subprocess.Popen(
+            [LILY, '-f', f, '-syn', IO_PARTITION_FILE],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True)
         out = p.stdout.read()
     except OSError as e:
         if e.errno == errno.ENOENT:
             raise Exception(
-                'lily.pl not found in path.\n'
-                'See the Lily docs for setting PERL5LIB and PATH.')
+                '`lily.pl` not found in path.\n'
+                'See the Lily docs for '
+                'setting `PERL5LIB` and `PATH`.')
         else:
             raise
-
     dotf = open(DOTFILE, 'r')
     fail_msg = 'Formula is not realizable'
     if dotf.read(len(fail_msg)) == fail_msg:
@@ -139,39 +140,44 @@ def synthesize(formula, env_vars=None, sys_vars=None):
 
 
 def lily_strategy2moore(g, env_vars, sys_vars):
-    """Return Moore transducer from Lily strategy graph C{g}.
+    """Return Moore transducer from Lily strategy graph `g`.
 
     Caution
     =======
+
     The resulting transducer is symboic,
     in that the guards denote conjunctions,
     *not* subsets of ports.
 
     @param g: Moore strategy game graph as output by Lily
-    @type g: C{networkx.MultiDiGraph}
+    @type g: `networkx.MultiDiGraph`
 
-    @rtype: L{MooreMachine}
+    @rtype: `MooreMachine`
     """
     g.remove_node('title')
-    phantom_init = {x for x in g if x.startswith('init-')}
-    game_nodes = {x for x in g if x not in phantom_init}
-    sys_nodes = {x for x in game_nodes if g.nodes[x].get('shape') is None}
+    phantom_init = {
+        x for x in g
+        if x.startswith('init-')}
+    game_nodes = {
+        x for x in g
+        if x not in phantom_init}
+    sys_nodes = {
+        x for x in game_nodes
+        if g.nodes[x].get('shape') is None}
     mapping = {k: i for i, k in enumerate(sys_nodes)}
     # avoid mapping MooreMachine, because it raises errors
     h = nx.relabel_nodes(g, mapping)
-
+    # define Moore machine
     m = MooreMachine()
     inports = {k: {False, True} for k in env_vars}
     outports = {k: {False, True} for k in sys_vars}
     m.add_inputs(inports)
     m.add_outputs(outports)
     m.add_nodes_from(mapping[x] for x in sys_nodes)
-
     # add initial states
     for u in phantom_init:
         for v in g.successors(u):
             m.states.initial.add(mapping[v])
-
     # label vertices with output values
     for u in m:
         oute = list(h.out_edges(u, data=True))
@@ -180,12 +186,10 @@ def lily_strategy2moore(g, env_vars, sys_vars):
         assert u_ is u
         d = _parse_label(attr['label'])
         m.add_node(u, **d)
-
         # input doesn't matter for this reaction ?
         if v in m:
             m.add_edge(u, v)
             continue
-
         # label edges with input values that matter
         for v_, w, attr in h.out_edges(v, data=True):
             assert v is v_, (v, v_)
@@ -196,11 +200,10 @@ def lily_strategy2moore(g, env_vars, sys_vars):
 
 
 def _parse_label(s):
-    """Return C{dict} from variable conjunction.
+    """Return `dict` from variable conjunction.
 
-    @type s: C{str}
-
-    @rtype: C{dict}
+    @type s: `str`
+    @rtype: `dict`
     """
     l = re.findall(r'(\w+)=(0|1)', s)
     return {k: bool(int(v)) for k, v in l}

@@ -54,10 +54,12 @@ def print_env():
         s = 'Did not find `gr1c` in `$PATH`.\n'
     c.append(s)
     s = _format_python_package_message(
-        'gr1py', gr1py_int.gr1py, 'https://pypi.python.org/pypi/gr1py')
+        'gr1py', gr1py_int.gr1py,
+        'https://pypi.python.org/pypi/gr1py')
     c.append(s)
     s = _format_python_package_message(
-        'dd', dd, 'https://pypi.python.org/pypi/dd')
+        'dd', dd,
+        'https://pypi.python.org/pypi/dd')
     c.append(s)
     if dd_cudd is None:
         s = (
@@ -65,20 +67,23 @@ def print_env():
             'Can be installed by compiling and linking the Cython bindings '
             'of `dd` to CUDD.\n')
     else:
-        s = 'Found Cython module `dd.cudd` as:\n    {dd_cudd}\n.'.format(
-            dd_cudd=dd_cudd)
+        s = f'Found Cython module `dd.cudd` as:\n    {dd_cudd}\n.'
     c.append(s)
     s = _format_python_package_message(
-        'omega', omega_int.omega, 'https://pypi.python.org/pypi/omega')
+        'omega', omega_int.omega,
+        'https://pypi.python.org/pypi/omega')
     c.append(s)
     s = _format_python_package_message(
-        'numpy', numpy, 'https://pypi.python.org/pypi/numpy')
+        'numpy', numpy,
+        'https://pypi.python.org/pypi/numpy')
     c.append(s)
     s = _format_python_package_message(
-        'scipy', scipy, 'https://pypi.python.org/pypi/scipy')
+        'scipy', scipy,
+        'https://pypi.python.org/pypi/scipy')
     c.append(s)
     s = _format_python_package_message(
-        'cvxopt', cvxopt, 'https://pypi.python.org/pypi/cvxopt')
+        'cvxopt', cvxopt,
+        'https://pypi.python.org/pypi/cvxopt')
     c.append(s)
     if _check_glpsol():
         s = 'Found GLPK solver `glpsol` in `$PATH`.\n'
@@ -90,8 +95,7 @@ def print_env():
             'Could not import module `cvxopt.glpk`.\n'
             'Can be installed by compiling and linking `cvxopt` to GLPK.\n')
     else:
-        s = 'Found module `cvxopt.glpk` as:\n    {cvxopt_glpk}\n.'.format(
-            cvxopt_glpk=cvxopt_glpk)
+        s = f'Found module `cvxopt.glpk` as:\n    {cvxopt_glpk}\n.'
     c.append(s)
     s = _format_python_package_message(
         'polytope', polytope, 'https://pypi.python.org/pypi/polytope')
@@ -122,14 +126,12 @@ def _format_python_package_message(name, package, url):
     """Return a `str` reporting information about package."""
     if package is None:
         s = (
-            'Could not import Python package `{name}`.\n'
-            'Can be installed from:\n    `{url}`\n').format(
-                name=name, url=url)
+            f'Could not import Python package `{name}`.\n'
+            f'Can be installed from:\n    `{url}`\n')
     else:
         s = (
-            'Found Python package `{name}` as:\n'
-            '    {gr1py}\n').format(
-                name=name, gr1py=package)
+            f'Found Python package `{name}` as:\n'
+            f'    {package}\n')
     return s
 
 

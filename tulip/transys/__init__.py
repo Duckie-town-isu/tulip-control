@@ -33,28 +33,38 @@
 
 Suggested abbreviation:
 
-    >>> from tulip import transys as trs
+```python
+from tulip import transys as trs
+```
 """
 from __future__ import absolute_import
-from .mathset import MathSet, SubSet, PowerSet, TypedDict
-from .labeled_graphs import prepend_with
-from .transys import (
+from tulip.transys.mathset import (
+    MathSet,
+    SubSet,
+    PowerSet,
+    TypedDict)
+from tulip.transys.labeled_graphs import prepend_with
+from tulip.transys.transys import (
     KripkeStructure,
     WeightedKripkeStructure,
     MarkovChain,
     MarkovDecisionProcess,
-    FiniteTransitionSystem, FTS,
+    FiniteTransitionSystem,
+    FTS,
     LabeledGameGraph,
-    tuple2fts, line_labeled_with, cycle_labeled_with
-)
+    tuple2fts,
+    line_labeled_with,
+    cycle_labeled_with)
+from tulip.transys.automata import (
+    BuchiAutomaton,
+    BA,
+    tuple2ba,
+    RabinAutomaton,
+    DRA,
+    ParityGame)
 
-from .automata import (
-    BuchiAutomaton, BA, tuple2ba,
-    RabinAutomaton, DRA,
-    ParityGame
-)
 
+from tulip.transys.machines import (
+    MooreMachine, MealyMachine)
 
-from .machines import MooreMachine, MealyMachine
-
-from .products import OnTheFlyProductAutomaton
+from tulip.transys.products import OnTheFlyProductAutomaton

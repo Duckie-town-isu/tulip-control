@@ -30,8 +30,10 @@
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-"""PLY-based parser for TuLiP LTL syntax,
-using AST classes from spec.ast
+"""PLY-based parser for TuLiP LTL syntax.
+
+This parser uses syntax-tree classes from
+the module `tulip.spec.ast`.
 """
 from __future__ import absolute_import
 from __future__ import print_function
@@ -66,18 +68,35 @@ class Lexer(object):
         'W': 'WEAK_UNTIL',
         'V': 'RELEASE'}
     values = {'next': 'X'}
-    delimiters = ['LPAREN', 'RPAREN', 'DQUOTES', 'COMMA']
+    delimiters = [
+        'LPAREN',
+        'RPAREN',
+        'DQUOTES',
+        'COMMA']
     operators = [
-        'NOT', 'AND', 'OR', 'XOR', 'IMP', 'BIMP',
-        'EQUALS', 'NEQUALS', 'LT', 'LE', 'GT', 'GE',
-        'PLUS', 'MINUS', 'TIMES', 'DIV', 'TRUNCATE', 'PRIME']
+        # logic
+        'NOT', 'AND',
+        'OR', 'XOR',
+        'IMP', 'BIMP',
+        # set theory
+        'EQUALS', 'NEQUALS',
+        # arithmetic
+        'LT', 'LE', 'GT', 'GE',
+        'PLUS', 'MINUS',
+        'TIMES', 'DIV',
+        'TRUNCATE',
+        # action operators
+        'PRIME']
     misc = ['NAME', 'NUMBER']
 
     def __init__(self, debug=False):
-        # for setting the logger, call build explicitly
+        # for setting the logger,
+        # directly call the method `build`
         self.tokens = (
-            self.delimiters + self.operators +
-            self.misc + list(set(self.reserved.values())))
+            self.delimiters +
+            self.operators +
+            self.misc +
+            list(set(self.reserved.values())))
         self.build(debug=debug)
 
     def t_NAME(self, t):
@@ -91,7 +110,6 @@ class Lexer(object):
 
     def t_ALWAYS(self, t):
         r'\[\]'
-        # use single letter as more readable and efficient
         t.value = 'G'
         return t
 
@@ -114,7 +132,9 @@ class Lexer(object):
 
     t_XOR = r'\^'
 
-    t_EQUALS = r'='  # a declarative language has no assignment
+    # a declarative language
+    # has no assignment
+    t_EQUALS = r'='
     t_NEQUALS = r'!=|/='
     t_LT = r'<'
     t_LE = r'<=|=<'
@@ -149,19 +169,28 @@ class Lexer(object):
         t.lexer.lineno += t.value.count('\n')
 
     def t_error(self, t):
-        warnings.warn('Illegal character "{t}"'.format(t=t.value[0]))
+        warnings.warn(
+            'Unknown character '
+            f'`{t.value[0]}`')
         t.lexer.skip(1)
 
-    def build(self, debug=False, debuglog=None, **kwargs):
+    def build(
+            self,
+            debug=False,
+            debuglog=None,
+            **kwargs):
         """Create a lexer.
 
-        @param kwargs: Same arguments as C{ply.lex.lex}:
-
-          - except for C{module} (fixed to C{self})
-          - C{debuglog} defaults to the logger C{"ltl_lex_log"}.
+        @param kwargs: same arguments as
+            for the function `ply.lex.lex`,
+            - except for `module`
+              (fixed to `self`)
+            - `debuglog` defaults to the
+              logger `"ltl_lex_log"`
         """
         if debug and debuglog is None:
-            debuglog = logging.getLogger(LEX_LOGGER)
+            debuglog = logging.getLogger(
+                LEX_LOGGER)
         self.lexer = ply.lex.lex(
             module=self,
             debug=debug,
@@ -182,10 +211,15 @@ class Parser(object):
         ('left', 'XOR'),
         ('left', 'OR'),
         ('left', 'AND'),
-        ('left', 'ALWAYS', 'EVENTUALLY'),
-        ('left', 'UNTIL', 'WEAK_UNTIL', 'RELEASE'),
+        ('left',
+            'ALWAYS', 'EVENTUALLY'),
+        ('left',
+            'UNTIL',
+            'WEAK_UNTIL',
+            'RELEASE'),
         ('left', 'EQUALS', 'NEQUALS'),
-        ('left', 'LT', 'LE', 'GT', 'GE'),
+        ('left',
+            'LT', 'LE', 'GT', 'GE'),
         ('left', 'PLUS', 'MINUS'),
         ('left', 'TIMES', 'DIV'),
         ('right', 'NOT', 'UMINUS'),
@@ -193,7 +227,8 @@ class Parser(object):
         ('left', 'PRIME'),
         ('nonassoc', 'TRUE', 'FALSE'))
 
-    def __init__(self, ast=None, lexer=None):
+    def __init__(
+            self, ast=None, lexer=None):
         if ast is None:
             ast = tulip.spec.ast.nodes
         if lexer is None:
@@ -203,17 +238,24 @@ class Parser(object):
         self.tokens = self.lexer.tokens
         self.build()
 
-    def build(self, tabmodule=None, outputdir='', write_tables=False,
-              debug=False, debuglog=None):
+    def build(
+            self,
+            tabmodule=None,
+            outputdir='',
+            write_tables=False,
+            debug=False,
+            debuglog=None):
         """Build parser using `ply.yacc`.
 
-        Default table module is `self.tabmodule`.
-        Default logger is `YACC_LOGGER`
+        The default table module is
+        as defined in `self.tabmodule`.
+        The default logger is `YACC_LOGGER`.
         """
         if tabmodule is None:
             tabmodule = self.tabmodule
         if debug and debuglog is None:
-            debuglog = logging.getLogger(YACC_LOGGER)
+            debuglog = logging.getLogger(
+                YACC_LOGGER)
         self.parser = ply.yacc.yacc(
             method='LALR',
             module=self,
@@ -225,19 +267,34 @@ class Parser(object):
             debuglog=debuglog)
 
     def parse(self, formula, debuglog=None):
-        """Parse formula string and create abstract syntax tree (AST).
+        """Return syntax tree for `formula`.
 
-        @param logger: defaults to logger C{"ltl_parser_log"}.
-        @type logger: C{logging.Logger}
+        @param formula: logic formula
+        @type formula: `str`
+        @param debuglog: logger passed as
+            keyword parameter `debuglog` to
+            the method
+            `ply.yacc.LRParser.parse`.
+            The default value is the logger
+            with name `PARSER_LOGGER`.
+        @type logger: `logging.Logger`
+        @return: abstract syntax tree that
+            results from parsing `formula`
+        @rtype: `tulip.spec.ast.nodes.Node`,
+            unless parameter `ast` was
+            passed to `self.__init__`
         """
         if debuglog is None:
-            debuglog = logging.getLogger(PARSER_LOGGER)
+            debuglog = logging.getLogger(
+                PARSER_LOGGER)
         root = self.parser.parse(
             formula,
             lexer=self.lexer.lexer,
             debug=debuglog)
         if root is None:
-            raise Exception('failed to parse:\n\t{f}'.format(f=formula))
+            raise Exception(
+                'failed to parse:\n'
+                f'\t{formula}')
         return root
 
     def p_nullary_connective(self, p):
@@ -273,8 +330,10 @@ class Parser(object):
 
     # both function and connective
     def p_ternary_conditional(self, p):
-        """expr : LPAREN ITE expr COMMA expr COMMA expr RPAREN"""
-        p[0] = self.ast.Operator(p[2], p[3], p[5], p[7])
+        ("""expr : LPAREN ITE expr """
+         """COMMA expr COMMA expr RPAREN""")
+        p[0] = self.ast.Operator(
+            p[2], p[3], p[5], p[7])
 
     def p_binary_predicate(self, p):
         """expr : expr EQUALS expr
@@ -329,19 +388,23 @@ class Parser(object):
             if tok is None:
                 break
             s.append(tok.value)
+        s = ' '.join(s)
         raise Exception(
-            'Syntax error at "{p}"\n'.format(p=p.value) +
-            'remaining input:\n{s}\n'.format(s=' '.join(s)))
+            f'Syntax error at "{p.value}"\n' +
+            f'remaining input:\n{s}\n')
 
 
 def parse(formula):
-    warnings.warn('Deprecated: Better to instantiate a Parser once only.')
+    warnings.warn(
+        'Deprecated: Better to '
+        'instantiate a Parser once only.')
     parser = Parser()
     return parser.parse(formula)
 
 
-if __name__ == '__main__':
-    h = logging.FileHandler('log.txt', mode='w')
+def _main():
+    h = logging.FileHandler(
+        'log.txt', mode='w')
     h.setLevel(logging.DEBUG)
     log = logging.getLogger(YACC_LOGGER)
     log.setLevel(logging.DEBUG)
@@ -354,11 +417,18 @@ if __name__ == '__main__':
     try:
         os.remove(tablepy)
     except:
-        print('no "{t}" found'.format(t=tablepy))
+        print(f'no "{tablepy}" found')
     try:
         os.remove(tablepyc)
     except:
-        print('no "{t}" found'.format(t=tablepyc))
+        print(f'no "{tablepyc}" found')
     parser = Parser()
-    parser.build(tabmodule, outputdir=outputdir,
-                 write_tables=True, debug=True)
+    parser.build(
+        tabmodule,
+        outputdir=outputdir,
+        write_tables=True,
+        debug=True)
+
+
+if __name__ == '__main__':
+    _main()

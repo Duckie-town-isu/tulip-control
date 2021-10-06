@@ -29,12 +29,10 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
-"""
-Convert state graphs to promela
-"""
+"""Convert state graphs to Promela."""
 from __future__ import print_function
-
 from time import strftime
+
 
 def fts2promela(graph, procname=None):
     """Convert (possibly labeled) state graph to Promela str.
@@ -69,64 +67,53 @@ def fts2promela(graph, procname=None):
         for prop in ap_alphabet:
             if prop is True:
                 continue
-
             if prop in ap_label:
-                s += '\t\t ' +str(prop) +' = 1;\n'
+                s += f'\t\t {prop} = 1;\n'
             else:
-                s += '\t\t ' +str(prop) +' = 0;\n'
-
-        s += '\t\t printf("State: ' +str(state) +'\\n");\n'
+                s += f'\t\t {prop} = 0;\n'
+        s += f'\t\t printf("State: {state}\\n");\n'
         s += '\t\n'
         return s
-
     def trans2promela(transitions, graph, ap_alphabet):
         s = '\t if\n'
         for (from_state, to_state, sublabels_dict) in transitions:
-            s += '\t :: atomic{\n'
-            s += '\t\t printf("' +str(sublabels_dict) +'\\n");\n'
-            s += state_ap2promela(to_state, graph, ap_alphabet)
-            s += '\t\t goto ' +str(to_state) +'\n'
-            s += '\t }\n'
+            s += (
+                '\t :: atomic{\n'
+                f'\t\t printf("{sublabels_dict}\\n");\n'
+                f'{state_ap2promela(to_state, graph, ap_alphabet)}'
+                f'\t\t goto {to_state}\n'
+                '\t }\n')
         s += '\t fi;\n\n'
         return s
-
     def get_label_of(state, graph):
-        state_label_pairs = graph.states.find([state] )
+        state_label_pairs = graph.states.find([state])
         (state_, ap_label) = state_label_pairs[0]
-        print('state:\t' +str(state) )
-        print('ap label:\t' +str(ap_label) )
+        print(f'state:\t{state}')
+        print(f'ap label:\t{ap_label}')
         return ap_label['ap']
-
     if procname is None:
         procname = graph.name
-
     s = '/*\n * Promela file generated with TuLiP\n'
-    s += ' * Date: '+str(strftime('%x %X %z') ) +'\n */\n\n'
+    s += ' * Date: ' + str(strftime('%x %X %z')) + '\n */\n\n'
     for ap in graph.atomic_propositions:
         # convention "!" means negation
         if ap not in {None, True}:
-            s += 'bool ' +str(ap) +';\n'
-
-    s += '\nactive proctype ' +procname +'(){\n'
-
+            s += f'bool {ap};\n'
+    s += f'\nactive proctype {procname}(){{\n'
     s += '\t if\n'
     for initial_state in graph.states.initial:
-        s += '\t :: goto ' +str(initial_state) +'\n'
+        s += f'\t :: goto {initial_state}\n'
     s += '\t fi;\n'
-
     ap_alphabet = graph.atomic_propositions
     for state in graph.states():
         out_transitions = graph.transitions.find(
-            {state}, as_dict=True
-        )
-
-        s += str(state).replace(' ', '_') +':'
+            {state}, as_dict=True)
+        s += str(state).replace(' ', '_') + ':'
         s += trans2promela(out_transitions, graph,
                            ap_alphabet)
-
     s += '}\n'
     return s
 
-#def mealy2promela():
-#    """Convert Mealy machine to Promela str.
-#    """
+
+# def mealy2promela():
+#     """Convert Mealy machine to Promela str."""

@@ -29,7 +29,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
-"""Algorithms on Kripke structures and Automata"""
+"""Algorithms on Kripke structures and Automata."""
 from __future__ import absolute_import
 from __future__ import print_function
 
@@ -54,9 +54,9 @@ parser = ltl2baint.Parser()
 
 
 def ltl2ba(formula):
-    """Convert LTL formula to Buchi Automaton using ltl2ba.
+    """Convert LTL formula to Buchi Automaton using `ltl2ba`.
 
-    @type formula: `str(formula)` must be admissible ltl2ba input
+    @type formula: `str(formula)` must be admissible `ltl2ba` input
 
     @return: Buchi automaton whose edges are annotated
         with Boolean formulas as `str`
@@ -69,7 +69,7 @@ def ltl2ba(formula):
     ba.add_edges_from(g.edges(data=True))
     ba.initial_nodes = initial
     ba.accepting_sets = accepting
-    logger.info('Resulting automaton:\n\n{ba}\n'.format(ba=ba))
+    logger.info(f'Resulting automaton:\n\n{ba}\n')
     return ba
 
 
@@ -80,10 +80,8 @@ def _multiply_mutable_states(self, other, prod_graph, prod_sys):
         state2 = other.states._int2mutant(idx2)
         prod_state = (state1, state2)
         return prod_state
-
     def label_union(nx_label):
         (v1, v2) = nx_label
-
         if v1 is None or v2 is None:
             raise Exception(
                 'At least one factor has unlabeled state, '
@@ -98,22 +96,18 @@ def _multiply_mutable_states(self, other, prod_graph, prod_sys):
             raise TypeError(
                 'The state sublabel types should support ' +
                 'either | or + for labeled system products.')
-
     def state_label_union(attr_dict):
         prod_attr_dict = dict()
         for k, v in attr_dict.items():
             prod_attr_dict[k] = label_union(v)
         return prod_attr_dict
-
     # union of state labels from the networkx tuples
     for prod_state_id, attr_dict in prod_graph.nodes(data=True):
         prod_attr_dict = state_label_union(attr_dict)
         prod_state = prod_ids2states(prod_state_id, self, other)
-
         prod_sys.states.add(prod_state)
         prod_sys.states.add(prod_state, **prod_attr_dict)
     print(prod_sys.states)
-
     # prod of initial states
     inits1 = self.states.initial
     inits2 = other.states.initial
@@ -123,7 +117,6 @@ def _multiply_mutable_states(self, other, prod_graph, prod_sys):
         new_init = (init1, init2)
         prod_init.append(new_init)
     prod_sys.states.initial |= prod_init
-
     # # multiply mutable states (only the reachable added)
     # if self.states.mutants or other.states.mutants:
     #     for idx, prod_state_id in prod_graph.nodes():
@@ -135,11 +128,10 @@ def _multiply_mutable_states(self, other, prod_graph, prod_sys):
 
     # action labeling is taken care by nx,
     # since transition taken at a time
-    for from_state_id, to_state_id, edge_dict in prod_graph.edges(data=True):
-
+    for from_state_id, to_state_id, edge_dict in (
+            prod_graph.edges(data=True)):
         from_state = prod_ids2states(from_state_id, self, other)
         to_state = prod_ids2states(to_state_id, self, other)
-
         prod_sys.transitions.add(
             from_state, to_state, **edge_dict)
     return prod_sys
@@ -151,8 +143,8 @@ def tensor_product(self, other, prod_sys=None):
 
     Reference
     =========
-    http://en.wikipedia.org/wiki/Strong_product_of_graphs
-    nx.algorithms.operators.product.strong_product
+    <http://en.wikipedia.org/wiki/Strong_product_of_graphs>
+    `nx.algorithms.operators.product.strong_product`
     """
     prod_graph = nx.product.tensor_product(self, other)
     # not populating ?
@@ -170,12 +162,14 @@ def tensor_product(self, other, prod_sys=None):
 def cartesian_product(self, other, prod_sys=None):
     """Return Cartesian product with given graph.
 
-    If u,v are nodes in C{self} and z,w nodes in C{other},
-    then ((u,v), (z,w) ) is an edge in the Cartesian product of
-    self with other if and only if:
-        - (u == v) and (z,w) is an edge of C{other}
-        OR
-        - (u,v) is an edge in C{self} and (z == w)
+    If `u`, `v` are nodes in `self`, and
+    `z`, `w` nodes in `other`,
+    then `((u, v), (z, w))` is an edge in
+    the Cartesian product of `self` with `other`,
+    if and only if:
+
+    - `(u == v)` and `(z, w)` is an edge of `other`, or
+    - `(u, v)` is an edge in `self` and `(z == w)`
 
     In system-theoretic terms, the Cartesian product
     is the interleaving where at each step,
@@ -183,7 +177,7 @@ def cartesian_product(self, other, prod_sys=None):
 
     So it is a type of parallel system.
 
-    This is an important distinction with the C{strong_product},
+    This is an important distinction with the `strong_product`,
     because that includes "diagonal" transitions, i.e., two
     processes executing truly concurrently.
 
@@ -195,10 +189,11 @@ def cartesian_product(self, other, prod_sys=None):
     would accurately model the existence of multiple cores,
     not just multiple processes executing on a single core.
 
+
     References
     ==========
-      - U{http://en.wikipedia.org/wiki/Cartesian_product_of_graphs}
-      - networkx.algorithms.operators.product.cartesian_product
+    - <http://en.wikipedia.org/wiki/Cartesian_product_of_graphs>
+    - `networkx.algorithms.operators.product.cartesian_product`
     """
     prod_graph = nx.product.cartesian_product(self, other)
     # not populating ?
@@ -214,9 +209,9 @@ def cartesian_product(self, other, prod_sys=None):
 
 
 def ts_sync_prod(ts1, ts2):
-    """Synchronous (tensor) product with other FTS.
+    """Synchronous (tensor) product with other `FTS`.
 
-    @type ts1, ts2: L{FiniteTransitionSystem}
+    @type ts1, ts2: `FiniteTransitionSystem`
     """
     prod_ts = FiniteTransitionSystem()
     # union of AP sets
@@ -235,24 +230,24 @@ def ts_sync_prod(ts1, ts2):
 def sync_prod(ts, ba):
     r"""Synchronous product between (BA, TS), or (BA1, BA2).
 
-    The result is always a L{BuchiAutomaton}:
+    The result is always a `BuchiAutomaton`:
 
-        - If C{ts_or_ba} is a L{FiniteTransitionSystem} TS,
-            then return the synchronous product BA * TS.
+    - If `ts_or_ba` is a `FiniteTransitionSystem` TS,
+        then return the synchronous product BA * TS.
 
-            The accepting states of BA * TS are those which
-            project on accepting states of BA.
+        The accepting states of BA * TS are those which
+        project on accepting states of BA.
 
-        - If C{ts_or_ba} is a L{BuchiAutomaton} BA2,
-            then return the synchronous product BA * BA2.
+    - If `ts_or_ba` is a `BuchiAutomaton` BA2,
+        then return the synchronous product BA * BA2.
 
-            The accepting states of BA * BA2 are those which
-            project on accepting states of both BA and BA2.
+        The accepting states of BA * BA2 are those which
+        project on accepting states of both BA and BA2.
 
-            This definition of accepting set extends
-            Def.4.8, p.156 U{[BK08]
-            <https://tulip-control.sourceforge.io/doc/bibliography.html#bk08>}
-            to NBA.
+        This definition of accepting set extends
+        Def.4.8, p.156 U{[BK08]
+        <https://tulip-control.sourceforge.io/doc/bibliography.html#bk08>}
+        to NBA.
 
     Synchronous product TS * BA or TS1 * TS2.
 
@@ -271,13 +266,13 @@ def sync_prod(ts, ba):
 
     See Also
     ========
-    L{_ts_ba_sync_prod}
+    `_ts_ba_sync_prod`
 
     @param ts_or_ba: other with which to take synchronous product
-    @type ts_or_ba: L{FiniteTransitionSystem} or L{BuchiAutomaton}
+    @type ts_or_ba: `FiniteTransitionSystem` or `BuchiAutomaton`
 
     @return: self * ts_or_ba
-    @rtype: L{BuchiAutomaton}
+    @rtype: `BuchiAutomaton`
 
     See Also
     ========
@@ -288,10 +283,10 @@ def sync_prod(ts, ba):
     <https://tulip-control.sourceforge.io/doc/bibliography.html#bk08>}
 
     @param ts_or_ba: system with which to take synchronous product
-    @type ts_or_ba: L{FiniteTransitionSystem} or L{BuchiAutomaton}
+    @type ts_or_ba: `FiniteTransitionSystem` or `BuchiAutomaton`
 
-    @return: synchronous product C{self} x C{ts_or_ba}
-    @rtype: L{FiniteTransitionSystem}
+    @return: synchronous product `self` x `ts_or_ba`
+    @rtype: `FiniteTransitionSystem`
     """
     if not isinstance(ba, BuchiAutomaton):
         raise Exception
@@ -313,32 +308,35 @@ def add(self, other):
     standard "pieces" using the functions: line_labeled_with,
     cycle_labeled_with
 
-    >>> n = 4
-    >>> L = n*['p'] # state labeling
-    >>> ts1 = line_labeled_with(L, n-1)
-    >>> ts1.plot()
-    >>>
-    >>> L = n*['p']
-    >>> ts2 = cycle_labeled_with(L)
-    >>> ts2.states.add('s3', ap={'!p'})
-    >>> ts2.plot()
-    >>>
-    >>> ts3 = ts1 +ts2
-    >>> ts3.transitions.add('s'+str(n-1), 's'+str(n) )
-    >>> ts3.default_layout = 'circo'
-    >>> ts3.plot()
+    ```python
+    n = 4
+    L = n * ['p']  # state labeling
+    ts1 = line_labeled_with(L, n-1)
+    ts1.plot()
 
-    See Also
+    L = n * ['p']
+    ts2 = cycle_labeled_with(L)
+    ts2.states.add('s3', ap={'!p'})
+    ts2.plot()
+
+    ts3 = ts1 + ts2
+    ts3.transitions.add(f's{n - 1}', f's{n}')
+    ts3.default_layout = 'circo'
+    ts3.plot()
+    ```
+
+    Relevant
     ========
-    L{line_labeled_with}, L{cycle_labeled_with}
+    `line_labeled_with`,
+    `cycle_labeled_with`
 
     @param other: system to merge with
-    @type other: C{FiniteTransitionSystem}
+    @type other: `FiniteTransitionSystem`
 
-    @return: merge of C{self} with C{other}, union of states,
+    @return: merge of `self` with `other`, union of states,
         initial states, atomic propositions, actions, edges and
-        labelings, those of C{other} taking precedence over C{self}.
-    @rtype: L{FiniteTransitionSystem}
+        labelings, those of `other` taking precedence over `self`.
+    @rtype: `FiniteTransitionSystem`
     """
     if not isinstance(other, FiniteTransitionSystem):
         msg = (
@@ -370,14 +368,20 @@ def add(self, other):
 def async_prod(self, ts):
     """Asynchronous product TS1 x TS2 between FT Systems.
 
-    See Also
+    Relevant
     ========
-    __or__, sync_prod, cartesian_product
+    `__or__`,
+    `sync_prod`,
+    `cartesian_product`
+
+    References
+    ==========
     Def. 2.18, p.38 U{[BK08]
     <https://tulip-control.sourceforge.io/doc/bibliography.html#bk08>}
     """
     if not isinstance(ts, FiniteTransitionSystem):
-        raise TypeError('ts must be a FiniteTransitionSystem.')
+        raise TypeError(
+            'ts must be a `FiniteTransitionSystem`.')
     if self.states.mutants or ts.states.mutants:
         mutable = True
     else:

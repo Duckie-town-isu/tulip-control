@@ -29,60 +29,60 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
-"""
-Export html containing d3.js animating SVG
-"""
+"""Export html containing `d3.js` animating SVG."""
 # there exists: https://github.com/mikedewar/d3py,
 # but it is not sufficiently developed yet,
 # so here the wheel is partially re-invented
-
 import os
 import inspect
 
 from networkx.readwrite import json_graph
 
+
 def _format_label(label_def, label_dot_format):
-    """Format state/edge labels, which pop-up on mouse hover.
-    """
+    """Format state/edge labels, which pop-up on mouse hover."""
     s = '"\\n\\n" +'
     for sublabel_name in label_def:
         shown_name = label_dot_format[sublabel_name]
         kv_sep = label_dot_format['type?label']
         sep = label_dot_format['separator']
-
-        s += '"' +shown_name +kv_sep +'" '
-        s += '+d.' +str(sublabel_name) +'+"' +sep+'" +'
+        s += '"' + shown_name + kv_sep + '" '
+        s += '+d.' + str(sublabel_name) + '+"' + sep + '" +'
     s += '" ";'
-
     return s
 
-def labeled_digraph2d3(graph, html_file_name='index.html'):
+
+def labeled_digraph2d3(
+        graph,
+        html_file_name='index.html'):
     """Export to SVG embedded in HTML, animated with d3.js
 
     Example
     =======
-    From C{examples/transys/machine_examples.py} call:
+    From `examples/transys/machine_examples.py` call:
 
-    >>> m = garage_counter_with_state_vars()
+    ```python
+    m = garage_counter_with_state_vars()
+    ```
 
-    Then export to html:
+    Then export to HTML:
 
-    >>> m.save('index.html', 'html')
+    ```python
+    m.save('index.html', 'html')
+    ```
 
     See Also
     ========
-    FSM, BA, Mealy
+    `FSM`, `BA`, `Mealy`
 
     @param graph: labeled graph to export
-    @type graph: L{LabeledDiGraph}
+    @type graph: `LabeledDiGraph`
     """
     file_path = inspect.getfile(inspect.currentframe())
-    dir_path = os.path.dirname(os.path.abspath(file_path) )
-
+    dir_path = os.path.dirname(os.path.abspath(file_path))
     d3_file_name = os.path.join(dir_path, 'd3.v3.min.js')
     d3_file = open(d3_file_name)
     d3_js = d3_file.read()
-
     s = """
     <!DOCTYPE html>
     <meta charset="utf-8">
@@ -107,11 +107,9 @@ def labeled_digraph2d3(graph, html_file_name='index.html'):
 
     <script>
     """
-
     # embed d3.js to create single .html,
     # instead of bunch of files
     s += d3_js
-
     s += """
     </script>
     <body>
@@ -144,7 +142,6 @@ def labeled_digraph2d3(graph, html_file_name='index.html'):
         .attr('class', 'end-arrow');
 
     var graph = """
-
     # embed to avoid browser local file-loading restrictions
     try:
         s += json_graph.dumps(graph)
@@ -152,10 +149,8 @@ def labeled_digraph2d3(graph, html_file_name='index.html'):
         # better error msg for numpy array
         import json
         data = json_graph.node_link_data(graph)
-        s += json.dumps(data, default=lambda x: str(x) )
-
+        s += json.dumps(data, default=lambda x: str(x))
     s += ';'
-
     s += """
     function draw(graph){
       force
@@ -174,19 +169,18 @@ def labeled_digraph2d3(graph, html_file_name='index.html'):
       link.append("title")
           .text(function(d) {
           	return """
-
     # edge labels (shown when mouse on edge)
     if (
             hasattr(graph, '_transition_label_def') and
             hasattr(graph, '_transition_dot_label_format')):
         transition_label_def = graph._transition_label_def
         transition_label_format = graph._transition_dot_label_format
-        s += _format_label(transition_label_def, transition_label_format)
+        s += _format_label(
+            transition_label_def,
+            transition_label_format)
     else:
         s += '" ";'
-
     s += """});
-
       var node = svg.selectAll(".node")
           .data(graph.nodes)
        .enter().append("g")
@@ -206,7 +200,6 @@ def labeled_digraph2d3(graph, html_file_name='index.html'):
       node.append("title")
           .style("fill", "gray")
           .text(function(d) { return """
-
     # edge labels (shown when mouse on edge)
     if (
             hasattr(graph, '_state_label_def') and
@@ -216,7 +209,6 @@ def labeled_digraph2d3(graph, html_file_name='index.html'):
         s += _format_label(state_label_def, state_label_format)
     else:
         s += '" ";'
-
     s += """});
 
       force.on("tick", function() {
@@ -245,7 +237,6 @@ def labeled_digraph2d3(graph, html_file_name='index.html'):
     </script>
     </body>
     """
-
     html_file = open(html_file_name, 'w')
     html_file.write(s)
     return True
