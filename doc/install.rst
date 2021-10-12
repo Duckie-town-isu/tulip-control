@@ -1,7 +1,7 @@
 Installation
 ------------
 
-TuLiP works with Python versions 3.7 to 3.10.
+TuLiP works with Python versions 3.7 to 3.11.
 To install with `pip <https://pip.pypa.io/en/stable/>`_
 from `PyPI <https://pypi.python.org/pypi/tulip>`_::
 
