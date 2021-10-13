@@ -32,8 +32,6 @@
 """Convert labeled graph to dot using
 pydot and custom filtering
 """
-from __future__ import division
-from __future__ import print_function
 
 import logging
 import re

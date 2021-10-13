@@ -37,7 +37,6 @@ Suggested abbreviation:
 from tulip import transys as trs
 ```
 """
-from __future__ import absolute_import
 from tulip.transys.mathset import (
     MathSet,
     SubSet,

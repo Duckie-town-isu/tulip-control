@@ -30,6 +30,5 @@
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 """Specification subpackage of TuLiP"""
-from __future__ import absolute_import
 from tulip.spec.form import LTL, GRSpec
 from tulip.spec.translation import translate
