@@ -89,7 +89,7 @@ def dijkstra_multiple_sources_multiple_targets(
         and cost is the sum of the edge costs on this path.
     """
     best_cost = float("inf")
-    best_path = []
+    best_path = list()
     for source in source_set:
         (cost, path) = dijkstra_single_source_multiple_targets(
             graph, source, target_set, cost_key

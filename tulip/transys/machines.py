@@ -226,7 +226,7 @@ class Transducer(LabeledDiGraph):
         self.state_vars = dict()
         self.inputs = dict()
         self.outputs = dict()
-        # self.set_actions = {}
+        # self.set_actions = dict()
 
         # state labeling
         self._state_label_def = dict()
@@ -566,7 +566,7 @@ class MealyMachine(Transducer):
             if project_dict(d, restricted_inputs) == inputs]
 
         if len(enabled_trans) == 0:
-            some_possibilities = []
+            some_possibilities = list()
             for i, j, d in self.edges([from_state], data=True):
                 # The number of possible inputs to suggest here is
                 # arbitrary. Consider making it a function parameter.
@@ -656,7 +656,7 @@ def guided_run(mealy, from_state=None, input_sequences=None):
     else:
         state = from_state
     n = len(next(iter(seqs.values())))
-    states_seq = []
+    states_seq = list()
     output_seqs = {k: list() for k in mealy.outputs}
     for i in range(n):
         inputs = {k: v[i] for k, v in seqs.items()}
@@ -689,7 +689,7 @@ def random_run(mealy, from_state=None, N=10):
         state = next(iter(mealy.states.initial))
     else:
         state = from_state
-    states_seq = []
+    states_seq = list()
     output_seqs = {k: list() for k in mealy.outputs}
     for i in range(N):
         trans = mealy.transitions.find([state])

@@ -53,7 +53,7 @@ class LabeledStateInputOutputPair(object):
         for key, val in self.input_dict.items():
             ret += "," + str(key) + "=" + str(val)
         ret += ") -> ("
-        output_str_list = []
+        output_str_list = list()
         for key, val in self.output_dict.items():
             output_str_list.append(str(key) + "=" + str(val))
         ret += ",".join(output_str_list) + ")"
@@ -120,7 +120,7 @@ class FunctionOnLabeledState(object):
     """
 
     def __init__(self, input_keys, output_keys):
-        self._state_input_output_list = []
+        self._state_input_output_list = list()
         if (
                 isinstance(input_keys, Iterable) and
                 not isinstance(input_keys, str)):
@@ -161,7 +161,7 @@ class FunctionOnLabeledState(object):
             input_tuple = (input_tuple,)
         assert len(self._input_keys) == len(input_tuple)
         state = input_tuple[self._state_index]
-        input_dict = {}
+        input_dict = dict()
         for ind, input_key in enumerate(self._input_keys):
             if ind == self._state_index:
                 continue
@@ -178,7 +178,7 @@ class FunctionOnLabeledState(object):
         if len(self._output_keys) == 1:
             output_tuple = (output_tuple,)
         assert len(self._output_keys) == len(output_tuple)
-        output_dict = {}
+        output_dict = dict()
         for ind, output_key in enumerate(self._output_keys):
             output_dict[output_key] = output_tuple[ind]
         return output_dict

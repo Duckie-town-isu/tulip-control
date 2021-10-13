@@ -164,7 +164,7 @@ class AbstractSwitched(object):
 
         For details read `AbstractPwa.plot`.
         """
-        axs = []
+        axs = list()
         color_seed = 0
         # merged partition exists ?
         if self.ppp is not None:

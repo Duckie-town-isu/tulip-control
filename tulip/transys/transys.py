@@ -742,7 +742,7 @@ def line_labeled_with(L, m=0):
     """
     n = len(L)
     S = range(m, m + n)
-    S0 = []  # user will define them
+    S0 = list()  # user will define them
     AP = {True}
     for ap_subset in L:
         # skip empty label ?
@@ -825,7 +825,7 @@ def _dumps_states(g):
     @type g: `FTS`
     """
     nodes = g
-    a = []
+    a = list()
     for u in nodes:
         ap = g.nodes[u]['ap']
         kv = ', '.join(
@@ -1029,7 +1029,7 @@ def simu_abstract(ts, simu_type):
             n_cells += 1
         S0[ap].add(node)
 
-    sol = []
+    sol = list()
     for ap in S0:
         sol.append(S0[ap])
 

@@ -371,7 +371,7 @@ class RabinPairs(object):
 
     def __init__(self, automaton_states):
         self._states = automaton_states
-        self._pairs = []
+        self._pairs = list()
 
     def __str__(self):
         s = 'L = Good states, U = Bad states\n' + 30 * '-' + '\n'
