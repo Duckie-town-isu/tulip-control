@@ -221,7 +221,7 @@ class LtiSysDyn:
     def plot(
             self,
             ax=None,
-            color=np.random.rand(3),
+            color=None,
             show_domain=True,
             res=(5, 5),
             **kwargs):
@@ -231,6 +231,8 @@ class LtiSysDyn:
             logger.error(
                 'failed to import `graphics`')
             return
+        if color is None:
+            color = np.random.rand(3)
         (x, res) = pc.grid_region(
             self.domain, res=res)
         n = self.A.shape[0]
@@ -278,7 +280,7 @@ class PwaSysDyn:
     """
     def __init__(
             self,
-            list_subsys=[],
+            list_subsys=None,
             domain=None,
             time_semantics=None,
             timestep=None,
@@ -297,6 +299,8 @@ class PwaSysDyn:
             consistent with `time_semantics` and
             `timestep`.
         """
+        if list_subsys is None:
+            list_subsys = list()
         if domain is None:
             warn(
                 'requires argument `domain`')
@@ -365,13 +369,21 @@ class PwaSysDyn:
     @classmethod
     def from_lti(
             cls,
-            A=[],
-            B=[],
-            E=[],
-            K=[],
+            A=None,
+            B=None,
+            E=None,
+            K=None,
             Uset=None,
             Wset=None,
             domain=None):
+        if A is None:
+            A = list()
+        if B is None:
+            B = list()
+        if E is None:
+            E = list()
+        if K is None:
+            K = list()
         lti_sys = LtiSysDyn(
             A, B, E, K, Uset, Wset, domain)
         return cls([lti_sys], domain)
@@ -627,8 +639,10 @@ class SwitchedSysDyn:
     @classmethod
     def from_pwa(
             cls,
-            list_subsys=[],
+            list_subsys=None,
             domain=None):
+        if list_subsys is None:
+            list_subsys = list()
         pwa_sys = PwaSysDyn(
             list_subsys, domain)
         return cls(
@@ -639,13 +653,21 @@ class SwitchedSysDyn:
     @classmethod
     def from_lti(
             cls,
-            A=[],
-            B=[],
-            E=[],
-            K=[],
+            A=None,
+            B=None,
+            E=None,
+            K=None,
             Uset=None,
             Wset=None,
             domain=None):
+        if A is None:
+            A = list()
+        if B is None:
+            B = list()
+        if E is None:
+            E = list()
+        if K is None:
+            K = list()
         pwa_sys = PwaSysDyn.from_lti(
             A, B, E, K,
             Uset, Wset, domain)
