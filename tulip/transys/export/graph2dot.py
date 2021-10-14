@@ -33,12 +33,9 @@
 pydot and custom filtering
 """
 
+from collections.abc import Iterable
 import logging
 import re
-try:
-    from collections.abc import Iterable
-except ImportError:
-    from collections import Iterable
 from textwrap import fill
 import io
 import numpy as np
