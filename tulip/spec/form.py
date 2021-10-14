@@ -39,7 +39,6 @@ This module knows about program structure,
 namely the sections of a specification file.
 """
 import logging
-logger = logging.getLogger(__name__)
 import pprint
 import time
 import re
@@ -47,6 +46,9 @@ import copy
 from tulip.spec import parser
 from tulip.spec import transformation as tx
 from tulip.spec import translation as ts
+
+
+logger = logging.getLogger(__name__)
 
 
 class LTL(object):

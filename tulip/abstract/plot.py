@@ -32,7 +32,6 @@
 #
 """Functions for plotting Partitions."""
 import logging
-logger = logging.getLogger(__name__)
 
 import networkx as nx
 import numpy as np
@@ -45,6 +44,10 @@ from polytope.plot import (
 #
 # import matplotlib as mpl
 # from tulip.graphics import newax
+
+
+logger = logging.getLogger(__name__)
+
 
 def plot_abstraction_scc(ab, ax=None):
     """Plot Regions colored by strongly-connected component.

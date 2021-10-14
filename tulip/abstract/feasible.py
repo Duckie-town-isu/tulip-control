@@ -45,10 +45,13 @@ Relevant
 """
 from collections.abc import Iterable
 import logging
-logger = logging.getLogger(__name__)
 
 import numpy as np
 import polytope as pc
+
+
+logger = logging.getLogger(__name__)
+
 
 def is_feasible(
         from_region, to_region, sys, N,

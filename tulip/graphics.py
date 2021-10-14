@@ -39,8 +39,6 @@ Their use in new applications is discouraged.
 They come from <https://github.com/johnyf/pyvectorized>.
 """
 import logging
-logger = logging.getLogger(__name__)
-
 from warnings import warn
 from itertools import zip_longest as izip_longest
 
@@ -51,8 +49,10 @@ try:
 except Exception as e:
     plt = None
     logger.error(e)
-
 # from mayavi import mlab
+
+
+logger = logging.getLogger(__name__)
 
 
 def dimension(ndarray):

@@ -45,7 +45,6 @@ reference
    http://doi.org/10.4204/EPTCS.50.3
 """
 import logging
-logger = logging.getLogger(__name__)
 
 import networkx as nx
 from tulip import transys as trs
@@ -53,6 +52,9 @@ from tulip.spec import lexyacc, GRSpec
 from tulip.spec import transformation as tx
 from tulip.spec import parser
 from tulip.spec import ast as sast
+
+
+logger = logging.getLogger(__name__)
 
 
 def check(formula):
