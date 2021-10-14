@@ -29,9 +29,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
-"""
-Transition System module developer examples
-"""
+"""Transition System module developer examples."""
 import networkx as nx
 from numpy.random import rand
 from scipy.sparse import lil_matrix

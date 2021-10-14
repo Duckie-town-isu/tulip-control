@@ -29,7 +29,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
-"""Interface to library of synthesis tools, e.g., gr1c, omega."""
+"""Interface to library of synthesis tools, e.g., `gr1c`, `omega`."""
 import copy
 import logging
 import pprint

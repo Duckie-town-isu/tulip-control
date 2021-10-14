@@ -30,8 +30,7 @@
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-"""TuLiP Toolbox Abstract subpackage
-"""
+"""TuLiP Toolbox Abstract subpackage."""
 # avoid shadowing modules
 from tulip.abstract.discretization import (
     discretize,
