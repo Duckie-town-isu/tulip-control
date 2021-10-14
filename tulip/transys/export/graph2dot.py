@@ -34,12 +34,12 @@ pydot and custom filtering
 """
 
 from collections.abc import Iterable
+import io
 import logging
 import re
 from textwrap import fill
-import io
-import numpy as np
 import networkx as nx
+import numpy as np
 import pydot
 # inline:
 #

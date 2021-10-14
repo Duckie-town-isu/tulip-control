@@ -46,12 +46,12 @@ import subprocess
 import networkx as nx
 import pydot
 
+from tulip.spec.form import GRSpec
+from tulip.spec.form import LTL
 from tulip.spec.parser import parse
 from tulip.spec.translation import translate
 from tulip.spec.translation import translate_ast
 from tulip.transys import MooreMachine
-from tulip.spec.form import GRSpec
-from tulip.spec.form import LTL
 
 
 logger = logging.getLogger(__name__)

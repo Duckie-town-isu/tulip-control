@@ -47,7 +47,8 @@ reference
 import logging
 
 import networkx as nx
-from tulip import transys as trs
+
+import tulip.transys as trs
 from tulip.spec import lexyacc, GRSpec
 from tulip.spec import transformation as tx
 from tulip.spec import parser

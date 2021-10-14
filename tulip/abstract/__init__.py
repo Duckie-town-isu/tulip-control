@@ -34,15 +34,19 @@
 """
 # avoid shadowing modules
 from tulip.abstract.discretization import (
-    discretize, discretize_switched,
+    discretize,
+    discretize_switched,
     multiproc_discretize_switched)
 from tulip.abstract.feasible import (
-    is_feasible, solve_feasible)
-
+    is_feasible,
+    solve_feasible)
 from tulip.abstract.prop2partition import (
-    prop2part, part2convex,
-    pwa_partition, add_grid,
-    PropPreservingPartition, PPP)
-
+    prop2part,
+    part2convex,
+    pwa_partition,
+    add_grid,
+    PropPreservingPartition,
+    PPP)
 from tulip.abstract.find_controller import (
-    get_input, find_discrete_state)
+    get_input,
+    find_discrete_state)
