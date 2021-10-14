@@ -315,7 +315,7 @@ def tuple2ba(
     return ba
 
 
-class RabinPairs(object):
+class RabinPairs:
     """Acceptance pairs for Rabin automaton.
 
     Each pair defines an acceptance condition.

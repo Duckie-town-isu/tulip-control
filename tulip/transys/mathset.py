@@ -77,7 +77,7 @@ def compare_lists(list1, list2):
     return same_lists
 
 
-class MathSet(object):
+class MathSet:
     """Mathematical set, allows unhashable elements.
 
     Examples
@@ -544,7 +544,7 @@ class SubSet(MathSet):
         super(SubSet, self).add_from(new_elements)
 
 
-class CartesianProduct(object):
+class CartesianProduct:
     """List of MathSets, with Cartesian semantics."""
 
     def __init__(self):
@@ -677,7 +677,7 @@ def powerset(iterable):
                                for r in range(len(s) + 1))
 
 
-class PowerSet(object):
+class PowerSet:
     """Efficiently store power set of a mathematical set.
 
     Set here isn't necessarily a Python set,

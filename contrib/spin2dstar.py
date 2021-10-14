@@ -65,7 +65,7 @@ DSTAR_SYN = {"&": "&",
              "U": "U"}
 
 
-class AST(object):
+class AST:
     def __init__(self, sym="", left="", right=""):
         self.sym = sym
         self.left = left

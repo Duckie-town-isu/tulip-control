@@ -35,7 +35,7 @@ from collections.abc import Iterable
 import json
 
 
-class LabeledStateInputOutputPair(object):
+class LabeledStateInputOutputPair:
     """Stores state, inputs, outputs, and state labels.
 
     A class for storing state and other inputs, outputs and
@@ -80,7 +80,7 @@ class LabeledStateInputOutputPair(object):
         return ret
 
 
-class FunctionOnLabeledState(object):
+class FunctionOnLabeledState:
     r"""Represents a function of a labeled state.
 
     A class that represents a function of a labeled state,

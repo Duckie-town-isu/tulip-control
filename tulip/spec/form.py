@@ -52,7 +52,7 @@ from tulip.spec import translation as ts
 logger = logging.getLogger(__name__)
 
 
-class LTL(object):
+class LTL:
     """LTL formula (specification).
 
     Minimal class that describes an LTL formula in the canonical TuLiP

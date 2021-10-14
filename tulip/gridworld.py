@@ -50,7 +50,7 @@ from .spec.form import GRSpec
 # import matplotlib
 
 
-class GridWorld(object):
+class GridWorld:
     """4-connected grids with primitives like obstacles and goals."""
 
     def __init__(self, gw_desc=None, prefix="Y"):

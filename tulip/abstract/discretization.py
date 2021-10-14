@@ -71,7 +71,7 @@ from tulip.abstract.plot import plot_ts_on_partition
 logger = logging.getLogger(__name__)
 debug = False
 
-class AbstractSwitched(object):
+class AbstractSwitched:
     """Abstraction of `SwitchedSysDyn`.
 
     This class stores also mode-specific and
@@ -200,7 +200,7 @@ class AbstractSwitched(object):
         #        axs.append(ax)
         return axs
 
-class AbstractPwa(object):
+class AbstractPwa:
     """Discrete abstraction of PWA dynamics, with attributes:
 
     - `ppp`: Partition into Regions.
