@@ -14,6 +14,7 @@
 import os
 import sys
 
+import commonmark
 
 # Make tulip package contents visible
 sys.path.append(os.path.abspath('..'))
@@ -29,6 +30,7 @@ sys.path.append(os.path.abspath('../tulip'))
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx_epytext',
     'sphinx.ext.imgmath',
     'sphinx.ext.viewcode']
 
@@ -165,3 +167,14 @@ html_last_updated_fmt = '%d %B %Y'
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'TuLiPdoc'
+
+
+def docstring(app, what, name, obj, options, lines):
+    md  = '\n'.join(lines)
+    ast = commonmark.Parser().parse(md)
+    rst = commonmark.ReStructuredTextRenderer().render(ast)
+    lines.clear()
+    lines += rst.splitlines()
+
+def setup(app):
+    app.connect('autodoc-process-docstring', docstring)
