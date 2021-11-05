@@ -1,0 +1,688 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>hybrid &#8212; TuLiP 1.4.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css" />
+    
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    
+    <script src="../_static/sidebar.js"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="nav-item nav-item-0"><a href="../index.html">TuLiP 1.4.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">hybrid</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for hybrid</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (c) 2011-2014 by California Institute of Technology</span>
+<span class="c1"># All rights reserved.</span>
+<span class="c1">#</span>
+<span class="c1"># Redistribution and use in source and binary forms, with or without</span>
+<span class="c1"># modification, are permitted provided that the following conditions</span>
+<span class="c1"># are met:</span>
+<span class="c1">#</span>
+<span class="c1"># 1. Redistributions of source code must retain the above copyright</span>
+<span class="c1">#    notice, this list of conditions and the following disclaimer.</span>
+<span class="c1">#</span>
+<span class="c1"># 2. Redistributions in binary form must reproduce the above copyright</span>
+<span class="c1">#    notice, this list of conditions and the following disclaimer in the</span>
+<span class="c1">#    documentation and/or other materials provided with the distribution.</span>
+<span class="c1">#</span>
+<span class="c1"># 3. Neither the name of the California Institute of Technology nor</span>
+<span class="c1">#    the names of its contributors may be used to endorse or promote</span>
+<span class="c1">#    products derived from this software without specific prior</span>
+<span class="c1">#    written permission.</span>
+<span class="c1">#</span>
+<span class="c1"># THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS</span>
+<span class="c1"># &quot;AS IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT</span>
+<span class="c1"># LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS</span>
+<span class="c1"># FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL CALTECH</span>
+<span class="c1"># OR THE CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,</span>
+<span class="c1"># SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT</span>
+<span class="c1"># LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF</span>
+<span class="c1"># USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND</span>
+<span class="c1"># ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,</span>
+<span class="c1"># OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT</span>
+<span class="c1"># OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF</span>
+<span class="c1"># SUCH DAMAGE.</span>
+<span class="c1">#</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Classes representing hybrid dynamical systems.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">warnings</span> <span class="kn">import</span> <span class="n">warn</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pformat</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">polytope</span> <span class="k">as</span> <span class="nn">pc</span>
+
+<span class="c1"># inline imports:</span>
+<span class="c1">#</span>
+<span class="c1"># from tulip.graphics import newax, quiver</span>
+
+<span class="k">def</span> <span class="nf">_indent</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">n</span><span class="o">*</span><span class="s1">&#39; &#39;</span>
+    <span class="k">return</span> <span class="n">w</span> <span class="o">+</span> <span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">+</span><span class="n">w</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+
+<div class="viewcode-block" id="LtiSysDyn"><a class="viewcode-back" href="../tutorial.html#hybrid.LtiSysDyn">[docs]</a><span class="k">class</span> <span class="nc">LtiSysDyn</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Represent discrete-time continuous-state dynamics::</span>
+
+<span class="sd">        s[t+1] = A*s[t] + B*u[t] + E*d[t] + K</span>
+
+<span class="sd">    subject to the constraints::</span>
+
+<span class="sd">        u[t] \in Uset</span>
+<span class="sd">        d[t] \in Wset</span>
+<span class="sd">        s[t] \in domain</span>
+
+<span class="sd">    where:</span>
+<span class="sd">        - u[t] the control input</span>
+<span class="sd">        - d[t] the disturbance input</span>
+<span class="sd">        - s[t] the system state</span>
+
+<span class="sd">    A LtiSysDyn object contains the fields:</span>
+
+<span class="sd">        - A, B, E, K, (matrices)</span>
+<span class="sd">        - Uset, Wset, (each a C{polytope.Polytope})</span>
+<span class="sd">        - domain (C{polytope.Polytope} or C{polytope.Region})</span>
+<span class="sd">        - time_semantics: &#39;discrete&#39; (if system is originally a discrete-time</span>
+<span class="sd">          system) or &#39;sampled&#39; (if system is sampled from a continuous-time</span>
+<span class="sd">          system)</span>
+<span class="sd">        - timestep: A positive real number containing the timestep (for sampled</span>
+<span class="sd">          system)</span>
+
+<span class="sd">    as defined above.</span>
+
+<span class="sd">    Note</span>
+<span class="sd">    ====</span>
+<span class="sd">    For state-dependent bounds on the input,::</span>
+<span class="sd">        [u[t]; s[t]] \in Uset</span>
+<span class="sd">    can be used.</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    ========</span>
+<span class="sd">    L{PwaSysDyn}, L{SwitchedSysDyn}, C{polytope.Polytope}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">B</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">E</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">K</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">Uset</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">Wset</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">time_semantics</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">timestep</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="n">Uset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Uset not given to LtiSysDyn()&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">Uset</span><span class="p">,</span> <span class="n">pc</span><span class="o">.</span><span class="n">Polytope</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;`Uset` has to be a Polytope&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Domain not given to LtiSysDyn()&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">((</span><span class="n">domain</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span>
+            <span class="p">(</span><span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">pc</span><span class="o">.</span><span class="n">Polytope</span><span class="p">)</span> <span class="ow">or</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">pc</span><span class="o">.</span><span class="n">Region</span><span class="p">))</span>
+            <span class="p">)</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;`domain` has to be a Polytope or Region&#39;</span><span class="p">)</span>
+
+        <span class="c1"># check dimensions agree</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">nA</span><span class="p">,</span> <span class="n">mA</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">shape</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;A matrix must be 2d array&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">nA</span> <span class="o">!=</span> <span class="n">mA</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;A must be square&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">domain</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">domain</span><span class="o">.</span><span class="n">dim</span> <span class="o">!=</span> <span class="n">mA</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;domain.dim != A.size[1]&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">B</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">nB</span><span class="p">,</span> <span class="n">mB</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">shape</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;B matrix must be 2d array&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">nA</span> <span class="o">!=</span> <span class="n">nB</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;A and B must have same number of rows&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">Uset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">Uset</span><span class="o">.</span><span class="n">dim</span> <span class="o">!=</span> <span class="n">mB</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">Uset</span><span class="o">.</span><span class="n">dim</span> <span class="o">!=</span> <span class="n">mB</span> <span class="o">+</span> <span class="n">nA</span><span class="p">):</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Uset.dim != B.size[1]&#39;</span>
+                    <span class="n">msg</span> <span class="o">+=</span> <span class="s1">&#39; and != B.size[1] + A.size[1]&#39;</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">E</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">nE</span><span class="p">,</span> <span class="n">mE</span> <span class="o">=</span> <span class="n">E</span><span class="o">.</span><span class="n">shape</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;E matrix must be 2d array&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">nA</span> <span class="o">!=</span> <span class="n">nE</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;A and E must have same number of rows&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">Wset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">Wset</span><span class="o">.</span><span class="n">dim</span> <span class="o">!=</span> <span class="n">mE</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Wset.dim != E.size[1]&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">K</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">nK</span><span class="p">,</span> <span class="n">mK</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">shape</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;K column vector must be 2d array&#39;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">nA</span> <span class="o">!=</span> <span class="n">nK</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;A and K must have same number of rows&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">mK</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;K must be a column vector&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">=</span> <span class="n">A</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">B</span> <span class="o">=</span> <span class="n">B</span>
+
+        <span class="k">if</span> <span class="n">K</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">A</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">K</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">mA</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">K</span> <span class="o">=</span> <span class="n">K</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">K</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">size</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">E</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">A</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">E</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">mA</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Wset</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">Polytope</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">E</span> <span class="o">=</span> <span class="n">E</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Wset</span> <span class="o">=</span> <span class="n">Wset</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">Uset</span> <span class="o">=</span> <span class="n">Uset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">domain</span> <span class="o">=</span> <span class="n">domain</span>
+
+        <span class="c1"># Check that timestep and semantics are valid.</span>
+        <span class="n">_check_time_data</span><span class="p">(</span><span class="n">time_semantics</span><span class="p">,</span> <span class="n">timestep</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_semantics</span> <span class="o">=</span> <span class="n">time_semantics</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timestep</span> <span class="o">=</span> <span class="n">timestep</span>
+
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="mi">3</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="s1">&#39;A =</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">_indent</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="p">),</span> <span class="n">n</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">B =</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">_indent</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="p">),</span> <span class="n">n</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">E =</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">_indent</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">E</span><span class="p">),</span> <span class="n">n</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">K =</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">_indent</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">K</span><span class="p">),</span> <span class="n">n</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Uset =</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">_indent</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Uset</span><span class="p">),</span> <span class="n">n</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Wset =</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">_indent</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Wset</span><span class="p">),</span> <span class="n">n</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">output</span>
+
+    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">show_domain</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+             <span class="n">res</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">tulip.graphics</span> <span class="kn">import</span> <span class="n">newax</span><span class="p">,</span> <span class="n">quiver</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;failed to import graphics&#39;</span><span class="p">)</span>
+            <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;pyvectorized not found. No plotting.&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">grid_region</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="p">,</span> <span class="n">res</span><span class="o">=</span><span class="n">res</span><span class="p">)</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">DA</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">DA</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">K</span>
+
+        <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">ax</span><span class="p">,</span> <span class="n">fig</span> <span class="o">=</span> <span class="n">newax</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">show_domain</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span>
+
+        <span class="n">quiver</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">ax</span></div>
+
+<div class="viewcode-block" id="PwaSysDyn"><a class="viewcode-back" href="../tutorial.html#hybrid.PwaSysDyn">[docs]</a><span class="k">class</span> <span class="nc">PwaSysDyn</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;PwaSysDyn class for specifying a polytopic piecewise affine system.</span>
+<span class="sd">    A PwaSysDyn object contains the fields:</span>
+
+<span class="sd">      - C{list_subsys}: list of L{LtiSysDyn}</span>
+
+<span class="sd">      - C{domain}: domain over which piecewise affine system is defined,</span>
+<span class="sd">          type: polytope.Polytope or polytope.Region</span>
+
+<span class="sd">      - C{time_semantics}: &#39;discrete&#39; (if system is originally a discrete-time</span>
+<span class="sd">       system) or &#39;sampled&#39; (if system is sampled from a continuous-time</span>
+<span class="sd">       system)</span>
+
+<span class="sd">      - C{timestep}: A positive real number containing the timestep (for sampled</span>
+<span class="sd">        systems)</span>
+
+<span class="sd">    For the system to be well-defined the domains of its subsystems should be</span>
+<span class="sd">    mutually exclusive (modulo intersections with empty interior) and cover the</span>
+<span class="sd">    domain.</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    ========</span>
+<span class="sd">    L{LtiSysDyn}, L{SwitchedSysDyn}, C{polytope.Polytope}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">list_subsys</span><span class="o">=</span><span class="p">[],</span> <span class="n">domain</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">time_semantics</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">timestep</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">overwrite_time</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        @type overwrite_time: bool</span>
+<span class="sd">        @param overwrite_time: If true, then overwrites any time data in the</span>
+<span class="sd">                               objects in C{list_subsys} with the data in</span>
+<span class="sd">                               C{time_semantics} and C{timestep} variables.</span>
+<span class="sd">                               Otherwise checks that the time data of the</span>
+<span class="sd">                               objects in C{list_subsys} are consistent with</span>
+<span class="sd">                               C{time_semantics} and C{timestep}.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Domain not given to PwaSysDyn()&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">((</span><span class="n">domain</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span>
+            <span class="p">(</span><span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">pc</span><span class="o">.</span><span class="n">Polytope</span><span class="p">)</span> <span class="ow">or</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">pc</span><span class="o">.</span><span class="n">Region</span><span class="p">))</span>
+            <span class="p">)</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;PwaSysDyn: `domain` has to be a Polytope or Region&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">list_subsys</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">uncovered_dom</span> <span class="o">=</span> <span class="n">domain</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="n">list_subsys</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># State space dimension</span>
+            <span class="n">m</span> <span class="o">=</span> <span class="n">list_subsys</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># Input space dimension</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">list_subsys</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">E</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># Disturbance space dimension</span>
+            <span class="k">for</span> <span class="n">subsys</span> <span class="ow">in</span> <span class="n">list_subsys</span><span class="p">:</span>
+                <span class="n">uncovered_dom</span> <span class="o">=</span> <span class="n">uncovered_dom</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">subsys</span><span class="o">.</span><span class="n">domain</span><span class="p">)</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">n</span><span class="o">!=</span><span class="n">subsys</span><span class="o">.</span><span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">or</span> <span class="n">m</span><span class="o">!=</span><span class="n">subsys</span><span class="o">.</span><span class="n">B</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">or</span>
+                    <span class="n">p</span><span class="o">!=</span><span class="n">subsys</span><span class="o">.</span><span class="n">E</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;PwaSysDyn: state, input, disturbance &quot;</span> <span class="o">+</span>
+                                    <span class="s2">&quot;dimensions have to be the same for all &quot;</span> <span class="o">+</span>
+                                     <span class="s2">&quot;subsystems&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">pc</span><span class="o">.</span><span class="n">is_empty</span><span class="p">(</span><span class="n">uncovered_dom</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;PwaSysDyn: subdomains must cover the domain&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span><span class="n">list_subsys</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">pc</span><span class="o">.</span><span class="n">is_fulldim</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">intersect</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">domain</span><span class="p">)</span> <span class="p">):</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;PwaSysDyn: subdomains have to be mutually&quot;</span><span class="o">+</span>
+                        <span class="s2">&quot; exclusive&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">list_subsys</span> <span class="o">=</span> <span class="n">list_subsys</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">domain</span> <span class="o">=</span> <span class="n">domain</span>
+
+        <span class="c1"># Input time semantics</span>
+        <span class="n">_check_time_data</span><span class="p">(</span><span class="n">time_semantics</span><span class="p">,</span> <span class="n">timestep</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">overwrite_time</span><span class="p">:</span>
+            <span class="n">_push_time_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_subsys</span><span class="p">,</span> <span class="n">time_semantics</span><span class="p">,</span> <span class="n">timestep</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">_check_time_consistency</span><span class="p">(</span><span class="n">list_subsys</span><span class="p">,</span> <span class="n">time_semantics</span><span class="p">,</span> <span class="n">timestep</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timestep</span> <span class="o">=</span> <span class="n">timestep</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_semantics</span> <span class="o">=</span> <span class="n">time_semantics</span>
+
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="s1">&#39;Piecewise-Affine System Dynamics</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="n">s</span> <span class="o">+=</span> <span class="mi">30</span> <span class="o">*</span> <span class="s1">&#39;-&#39;</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+
+        <span class="n">s</span> <span class="o">+=</span> <span class="mi">3</span><span class="o">*</span><span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="s1">&#39;Domain:</span><span class="se">\n\n</span><span class="s1">&#39;</span>
+        <span class="n">s</span> <span class="o">+=</span> <span class="n">_indent</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="p">),</span> <span class="n">n</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">sys</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_subsys</span><span class="p">):</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="mi">3</span><span class="o">*</span><span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="s1">&#39;Subsystem: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="n">_indent</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">sys</span><span class="p">),</span> <span class="n">n</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">s</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_lti</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">A</span><span class="o">=</span><span class="p">[],</span> <span class="n">B</span><span class="o">=</span><span class="p">[],</span> <span class="n">E</span><span class="o">=</span><span class="p">[],</span> <span class="n">K</span><span class="o">=</span><span class="p">[],</span>
+                 <span class="n">Uset</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">Wset</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">domain</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">lti_sys</span> <span class="o">=</span> <span class="n">LtiSysDyn</span><span class="p">(</span><span class="n">A</span><span class="p">,</span><span class="n">B</span><span class="p">,</span><span class="n">E</span><span class="p">,</span><span class="n">K</span><span class="p">,</span><span class="n">Uset</span><span class="p">,</span><span class="n">Wset</span><span class="p">,</span><span class="n">domain</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">([</span><span class="n">lti_sys</span><span class="p">],</span> <span class="n">domain</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show_domain</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">tulip.graphics</span> <span class="kn">import</span> <span class="n">newax</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;failed to import graphics&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">ax</span><span class="p">,</span> <span class="n">fig</span> <span class="o">=</span> <span class="n">newax</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">subsystem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_subsys</span><span class="p">:</span>
+            <span class="n">subsystem</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span>
+                           <span class="n">show_domain</span><span class="o">=</span><span class="n">show_domain</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ax</span></div>
+
+<span class="k">class</span> <span class="nc">SwitchedSysDyn</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Represent hybrid systems switching between dynamic modes.</span>
+
+<span class="sd">    A C{SwitchedSysDyn} represents a system with switching modes</span>
+<span class="sd">    that depend on both discrete:</span>
+
+<span class="sd">        - n_env environment variables (uncontrolled)</span>
+<span class="sd">        - n_sys system variables (controlled)</span>
+
+<span class="sd">    A C{SwitchedSysDyn} object contains the fields:</span>
+
+<span class="sd">     - C{disc_domain_size}: 2-tuple of numbers of modes</span>
+<span class="sd">       type: (n_env, n_sys)</span>
+
+<span class="sd">     - C{env_labels}: (optional) labels for discrete environment variables</span>
+<span class="sd">       type: list of len(n_env)</span>
+<span class="sd">       default: range(n_env)</span>
+
+<span class="sd">     - C{disc_sys_labels}: (optional) labels for discrete system variables</span>
+<span class="sd">       type: list of len(n_sys)</span>
+<span class="sd">       default: range(n_sys)</span>
+
+<span class="sd">     - C{dynamics}: mapping mode 2-tuples to active dynamics::</span>
+
+<span class="sd">         (env_label, sys_label) -&gt; PwaSysDyn</span>
+
+<span class="sd">       type: dict</span>
+<span class="sd">       default: If no env_label or sys_label passed,</span>
+<span class="sd">       then default to int indices (i,j) L{PwaSysDyn}.</span>
+
+<span class="sd">     - C{cts_ss}: continuous state space over which hybrid system is defined.</span>
+<span class="sd">       type: C{polytope.Region}</span>
+
+<span class="sd">     - C{time_semantics}: &#39;discrete&#39; (if system is originally a discrete-time</span>
+<span class="sd">       system) or &#39;sampled&#39; (if system is sampled from a continuous-time</span>
+<span class="sd">       system)</span>
+
+<span class="sd">     - C{timestep}: A positive real number containing the timestep (for sampled</span>
+<span class="sd">       systems)</span>
+
+
+<span class="sd">    Note</span>
+<span class="sd">    ====</span>
+<span class="sd">    We assume that system and environment switching modes are</span>
+<span class="sd">    independent of one another.  (Use LTL statement to make it not so.)</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    ========</span>
+<span class="sd">    L{LtiSysDyn}, L{PwaSysDyn}, C{polytope.Region}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">disc_domain_size</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span>
+                 <span class="n">dynamics</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cts_ss</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">env_labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">disc_sys_labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">time_semantics</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">timestep</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">overwrite_time</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        @type overwrite_time: bool</span>
+<span class="sd">        @param overwrite_time: If true, then overwrites any time data in the</span>
+<span class="sd">                               objects in C{list_subsys} with the data in</span>
+<span class="sd">                               C{time_semantics} and C{timestep} variables.</span>
+<span class="sd">                               Otherwise checks that the time data of the</span>
+<span class="sd">                               objects in C{list_subsys} are consistent with</span>
+<span class="sd">                               C{time_semantics} and C{timestep}.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># check that the continuous domain is specified</span>
+        <span class="k">if</span> <span class="n">cts_ss</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;continuous state space not given to SwitchedSysDyn&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cts_ss</span><span class="p">,</span> <span class="p">(</span><span class="n">pc</span><span class="o">.</span><span class="n">Polytope</span><span class="p">,</span> <span class="n">pc</span><span class="o">.</span><span class="n">Region</span><span class="p">)</span> <span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;SwitchedSysDyn: &#39;</span> <span class="o">+</span>
+                   <span class="s1">&#39;`cts_ss` must be a Polytope or Region&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">disc_domain_size</span> <span class="o">=</span> <span class="n">disc_domain_size</span>
+
+        <span class="c1"># If label numbers agree with disc_domain_size, then use them.</span>
+        <span class="c1"># Otherwise, ignore the labels.</span>
+        <span class="n">n_env</span><span class="p">,</span> <span class="n">n_sys</span> <span class="o">=</span> <span class="n">disc_domain_size</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_env_labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_labels</span><span class="p">(</span><span class="n">n_env</span><span class="p">,</span> <span class="n">env_labels</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_disc_sys_labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_labels</span><span class="p">(</span><span class="n">n_sys</span><span class="p">,</span> <span class="n">disc_sys_labels</span><span class="p">)</span>
+
+        <span class="c1"># Check each dynamics key is a valid mode,</span>
+        <span class="c1"># i.e., a valid combination of env and sys labels.</span>
+        <span class="k">if</span> <span class="n">dynamics</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">modes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_mode_combs</span>
+
+            <span class="n">undefined_modes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">dynamics</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">modes</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">undefined_modes</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;SwitchedSysDyn: `dynamics` keys inconsistent&#39;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s1">&#39; with discrete mode labels.</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s1">&#39;Undefined modes:</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">undefined_modes</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+            <span class="n">missing_modes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">modes</span><span class="p">)</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">dynamics</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+            <span class="k">if</span> <span class="n">missing_modes</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Missing the modes:</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">missing_modes</span><span class="p">)</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1"> Make sure you did not forget any modes,</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s1">&#39;otherwise this is fine.&#39;</span>
+                <span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">sys</span><span class="p">,</span> <span class="n">PwaSysDyn</span><span class="p">)</span>
+                        <span class="k">for</span> <span class="n">sys</span> <span class="ow">in</span> <span class="n">dynamics</span><span class="o">.</span><span class="n">values</span><span class="p">()]):</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;For each mode dynamics must be PwaSysDyn.</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s1">&#39;Got instead: &#39;</span> <span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">sys</span><span class="p">))</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dynamics</span> <span class="o">=</span> <span class="n">dynamics</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cts_ss</span> <span class="o">=</span> <span class="n">cts_ss</span>
+
+        <span class="n">_check_time_data</span><span class="p">(</span><span class="n">time_semantics</span><span class="p">,</span> <span class="n">timestep</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">overwrite_time</span><span class="p">:</span>
+            <span class="n">_push_time_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dynamics</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span> <span class="n">time_semantics</span><span class="p">,</span> <span class="n">timestep</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">_check_time_consistency</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">dynamics</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span> <span class="n">time_semantics</span><span class="p">,</span> <span class="n">timestep</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timestep</span> <span class="o">=</span> <span class="n">timestep</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_semantics</span> <span class="o">=</span> <span class="n">time_semantics</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">n_env</span><span class="p">,</span> <span class="n">n_sys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">disc_domain_size</span>
+
+        <span class="n">s</span> <span class="o">=</span> <span class="s1">&#39;Hybrid System Dynamics</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="n">s</span> <span class="o">+=</span> <span class="mi">30</span> <span class="o">*</span> <span class="s1">&#39;-&#39;</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+
+        <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;Modes:</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="n">s</span> <span class="o">+=</span> <span class="mi">4</span><span class="o">*</span><span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="s1">&#39;Environment (&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">n_env</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; modes):</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="n">s</span> <span class="o">+=</span> <span class="mi">6</span><span class="o">*</span><span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="n">pformat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env_labels</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="n">s</span> <span class="o">+=</span> <span class="mi">4</span><span class="o">*</span><span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="s1">&#39;System: (&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">n_sys</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; modes)</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="n">s</span> <span class="o">+=</span> <span class="mi">6</span><span class="o">*</span><span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="n">pformat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">disc_sys_labels</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+
+        <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;Continuous State Space:</span><span class="se">\n\n</span><span class="s1">&#39;</span>
+        <span class="n">s</span> <span class="o">+=</span> <span class="n">_indent</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cts_ss</span><span class="p">),</span> <span class="mi">4</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+
+        <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;Dynamics:</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="k">for</span> <span class="n">mode</span><span class="p">,</span> <span class="n">pwa</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dynamics</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="mi">4</span><span class="o">*</span><span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="s1">&#39;mode: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="mi">4</span><span class="o">*</span><span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="s1">&#39;dynamics:</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">_indent</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pwa</span><span class="p">),</span> <span class="mi">8</span><span class="p">)</span> <span class="o">+</span><span class="s1">&#39;</span><span class="se">\n\n</span><span class="s1">&#39;</span>
+        <span class="k">return</span> <span class="n">s</span>
+
+    <span class="k">def</span> <span class="nf">_check_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">labels</span><span class="p">):</span>
+        <span class="c1"># don&#39;t complain for default</span>
+        <span class="k">if</span> <span class="n">labels</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="c1"># len exists ?</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># is len correct ?</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;number of environment labels is inconsistent&#39;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s1">&#39; with discrete domain size.</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s1">&#39;Ignoring given environment labels.</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s1">&#39;Defaulting to integer labels.&#39;</span>
+                <span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+                <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Environment labels of type: &#39;</span> <span class="o">+</span>
+                 <span class="nb">type</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;have no len()&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">labels</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">all_mode_combs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return all possible combinations of modes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">modes</span> <span class="o">=</span> <span class="p">[(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_labels</span>
+                           <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">disc_sys_labels</span><span class="p">]</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Available modes: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">modes</span><span class="p">)</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">modes</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">modes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dynamics</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;No dynamics defined (None).&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dynamics</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">env_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_env_labels</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">disc_domain_size</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_env_labels</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">disc_sys_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_disc_sys_labels</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">disc_domain_size</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_disc_sys_labels</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_pwa</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">list_subsys</span><span class="o">=</span><span class="p">[],</span> <span class="n">domain</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">pwa_sys</span> <span class="o">=</span> <span class="n">PwaSysDyn</span><span class="p">(</span><span class="n">list_subsys</span><span class="p">,</span><span class="n">domain</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="p">{(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">):</span><span class="n">pwa_sys</span><span class="p">},</span> <span class="n">domain</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_lti</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">A</span><span class="o">=</span><span class="p">[],</span> <span class="n">B</span><span class="o">=</span><span class="p">[],</span> <span class="n">E</span><span class="o">=</span><span class="p">[],</span> <span class="n">K</span><span class="o">=</span><span class="p">[],</span>
+                 <span class="n">Uset</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">Wset</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">domain</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">pwa_sys</span> <span class="o">=</span> <span class="n">PwaSysDyn</span><span class="o">.</span><span class="n">from_lti</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span>
+                                     <span class="n">Uset</span><span class="p">,</span> <span class="n">Wset</span><span class="p">,</span> <span class="n">domain</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="p">{(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">):</span><span class="n">pwa_sys</span><span class="p">},</span> <span class="n">domain</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_push_time_data</span><span class="p">(</span><span class="n">system_list</span><span class="p">,</span> <span class="n">time_semantics</span><span class="p">,</span> <span class="n">timestep</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Overwrite the time data in system list. Throws warnings if overwriting</span>
+<span class="sd">    existing data.&quot;&quot;&quot;</span>
+
+    <span class="k">for</span> <span class="n">system</span> <span class="ow">in</span> <span class="n">system_list</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">system</span><span class="o">.</span><span class="n">time_semantics</span> <span class="o">!=</span> <span class="n">time_semantics</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">system</span><span class="o">.</span><span class="n">time_semantics</span>
+            <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Overwriting existing time semantics data.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">system</span><span class="o">.</span><span class="n">timestep</span> <span class="o">!=</span> <span class="n">timestep</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">system</span><span class="o">.</span><span class="n">timestep</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Overwriting existing timestep data.&#39;</span><span class="p">)</span>
+        <span class="n">system</span><span class="o">.</span><span class="n">time_semantics</span> <span class="o">=</span> <span class="n">time_semantics</span>
+        <span class="n">system</span><span class="o">.</span><span class="n">timestep</span> <span class="o">=</span> <span class="n">timestep</span>
+
+        <span class="c1"># Overwrite LTI in system if system is a PWA</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">system</span><span class="p">,</span> <span class="n">PwaSysDyn</span><span class="p">):</span>
+            <span class="n">_push_time_data</span><span class="p">(</span><span class="n">system</span><span class="o">.</span><span class="n">list_subsys</span><span class="p">,</span> <span class="n">time_semantics</span><span class="p">,</span> <span class="n">timestep</span><span class="p">)</span>
+
+
+
+<span class="k">def</span> <span class="nf">_check_time_data</span><span class="p">(</span><span class="n">semantics</span><span class="p">,</span> <span class="n">timestep</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Checks that time semantics and timestep are correctly specified. Raises</span>
+<span class="sd">    ValueErrors if that&#39;s not the case.</span>
+
+<span class="sd">    @type semantics: string</span>
+<span class="sd">    @param timestep: any positive number</span>
+<span class="sd">    @type timestep: int or float</span>
+
+<span class="sd">    @rtype: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">semantics</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;sampled&#39;</span><span class="p">,</span> <span class="s1">&#39;discrete&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Time semantics must be discrete or &#39;</span> <span class="o">+</span>
+            <span class="s1">&#39;sampled (sampled from continuous time system).&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">((</span><span class="n">semantics</span> <span class="o">==</span> <span class="s1">&#39;discrete&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">timestep</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Discrete semantics must not have a timestep&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">timestep</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">error_string</span> <span class="o">=</span> <span class="s1">&#39;Timestep must be a positive real number or unspecified.&#39;</span>
+        <span class="k">if</span> <span class="n">timestep</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">error_string</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">timestep</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">error_string</span><span class="p">)</span>
+
+
+
+<span class="k">def</span> <span class="nf">_check_time_consistency</span><span class="p">(</span><span class="n">system_list</span><span class="p">,</span> <span class="n">time_semantics</span><span class="p">,</span> <span class="n">timestep</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Checks that all the dynamical systems in system_list have the same time</span>
+<span class="sd">    semantics and timestep. Raises ValueError if not the case.</span>
+
+<span class="sd">    @type system_list: list of L{LtiSysDyn} or L{PwaSysDyn}</span>
+<span class="sd">    @rtype: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Check that time semantics for all subsystems match</span>
+    <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">system_list</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="n">system_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span><span class="o">.</span><span class="n">timestep</span> <span class="o">!=</span> <span class="n">system_list</span><span class="p">[</span><span class="n">ind</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">timestep</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Not all timesteps in child systems are the same.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">system_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span><span class="o">.</span><span class="n">time_semantics</span> <span class="o">!=</span> <span class="n">system_list</span><span class="p">[</span><span class="n">ind</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">time_semantics</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Not all time semantics are the same.&#39;</span><span class="p">)</span>
+
+
+    <span class="c1"># Check that time semantics for all subsystems match specified system and</span>
+    <span class="c1"># timestep</span>
+    <span class="k">if</span> <span class="n">system_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">timestep</span> <span class="o">!=</span> <span class="n">timestep</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Timestep of subsystems do not match specified &#39;</span> <span class="o">+</span>
+                         <span class="s1">&#39;timestep.&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">system_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">time_semantics</span> <span class="o">!=</span> <span class="n">time_semantics</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Time semantics of subsystems do not match &#39;</span> <span class="o">+</span>
+                         <span class="s1">&#39;specified time semantics.&#39;</span><span class="p">)</span>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="nav-item nav-item-0"><a href="../index.html">TuLiP 1.4.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">hybrid</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2010-2017, California Institute of Technology.
+      Last updated on 05 November 2021.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.2.0.
+    </div>
+  </body>
+</html>
