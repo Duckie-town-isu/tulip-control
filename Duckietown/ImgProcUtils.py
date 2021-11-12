@@ -42,8 +42,9 @@ def detect_which_lane(image):
     # print("right white   ", sum(mask_white_right[0]))
 
     cv2.imshow("left", mask_yellow_left[:, :])
+    cv2.waitKey(0)
     cv2.imshow("right", mask_yellow_right)
-
+    cv2.waitKey(0)
     return image
 
 """
