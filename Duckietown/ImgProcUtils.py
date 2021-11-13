@@ -46,18 +46,5 @@ def detect_which_lane(image):
 
     return lane
 
-
-"""
-arr = misc.imread(image)
-        arr_list=arr.tolist()
-        r=g=b=0
-        for row in arr_list:
-            for item in row:
-                r=r+item[0]
-                g=g+item[1]
-                b=b+item[2]  
-        total=r+g+b
-        red=r/total*100
-        green=g/total*100
-        blue=b/total*100
-"""
+def draw_map():
+    pass
