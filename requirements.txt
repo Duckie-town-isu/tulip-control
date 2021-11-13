@@ -30,3 +30,5 @@ setuptools~=57.0.0
 opencv-python~=4.5.4.58
 matplotlib~=3.4.3
 dubins~=1.0.1
+Shapely~=1.8.0
+descartes~=1.1.0

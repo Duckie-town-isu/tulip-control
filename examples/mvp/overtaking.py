@@ -190,7 +190,6 @@ if len(valid_iterations) > 0:
         ax.set_xlabel("Iteration")
         ax.set_ylabel("The level of unsafety")
         ax.legend(loc="best")
-
 plt.show()
 
 # 1000 iterations: [0, 0, 2.2199999999999998]
